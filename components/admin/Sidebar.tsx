@@ -1,0 +1,74 @@
+// components/admin/Sidebar.tsx
+"use client";
+
+import Link from 'next/link';
+import Image from 'next/image'; // Importamos el componente Image
+import { usePathname } from 'next/navigation';
+import React from 'react';
+import { signout } from '@/app/login/actions';
+
+// --- Iconos ---
+const HomeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h7.5" /></svg>;
+const PackageIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>;
+const ShoppingCartIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.823-6.841a.75.75 0 0 0-.542-.924l-11.42-2.855a.75.75 0 0 0-.924.542l-1.823 6.841a.75.75 0 0 0 .542.924M7.5 14.25 6.106 5.165m0 0a.75.75 0 0 1 .542-.924l11.42-2.855a.75.75 0 0 1 .924.542l1.823 6.841a.75.75 0 0 1-.542.924l-11.42 2.855a.75.75 0 0 1-.924-.542Z" /></svg>;
+const MenuIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>;
+const TagIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>;
+const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0-3-3m0 0 3-3m-3 3H9" /></svg>;
+
+
+const navLinks = [
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Productos', href: '/products', icon: PackageIcon },
+  { name: 'Catálogo', href: '/catalog', icon: TagIcon },
+  { name: 'Órdenes', href: '/orders', icon: ShoppingCartIcon },
+];
+
+interface SidebarProps { isCollapsed: boolean; toggleSidebar: () => void; }
+
+export function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
+  const pathname = usePathname();
+
+  return (
+    <div className="flex flex-col h-full bg-gray-800 text-white">
+      <div className="p-4">
+        <div className="flex items-center justify-between h-12 mb-4">
+          <div className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+             <Image src="/logo.jpg" alt="Levist Uniforms Logo" width={32} height={32} className="rounded-md" />
+             <div className="flex flex-col">
+                <h1 className="text-xl font-bold whitespace-nowrap">Levist</h1>
+             </div>
+          </div>
+          <button onClick={toggleSidebar} className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white"><MenuIcon className="h-6 w-6" /></button>
+        </div>
+        <ul className="space-y-2 flex-1">
+          {navLinks.map((link) => {
+            const isActive = pathname.startsWith(link.href);
+            return (
+              <li key={link.name}>
+                <Link href={link.href} title={isCollapsed ? link.name : ''} className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-700 ${isActive ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'} ${isCollapsed ? 'justify-center' : ''}`}>
+                  <link.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{link.name}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="mt-auto p-4 border-t border-gray-700">
+        <form action={signout}>
+            <button
+                type="submit"
+                className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 transition-all text-gray-400 hover:bg-red-900/50 hover:text-white ${isCollapsed ? 'justify-center' : ''}`}
+                title={isCollapsed ? 'Cerrar Sesión' : ''}
+            >
+                <LogoutIcon className="h-5 w-5 flex-shrink-0" />
+                <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+                    Cerrar Sesión
+                </span>
+            </button>
+        </form>
+      </div>
+    </div>
+  );
+}
