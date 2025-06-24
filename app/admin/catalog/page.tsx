@@ -1,4 +1,4 @@
-// app/(admin)/catalog/page.tsx
+// app/admin/catalog/page.tsx
 import { createClient } from '@/lib/supabase/server';
 import { CatalogManager } from '@/components/admin/CatalogManager';
 

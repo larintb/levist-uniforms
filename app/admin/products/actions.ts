@@ -1,4 +1,4 @@
-// app/(admin)/products/actions.ts
+// app/admin/products/actions.ts
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -33,8 +33,8 @@ export async function createProductAction(formData: FormData) {
   } catch (error: any) {
     return { success: false, message: error.message };
   }
-  revalidatePath('/dashboard');
-  revalidatePath('/products');
+  revalidatePath('/admin/dashboard');
+  revalidatePath('/admin/products');
   return { success: true, message: "Producto creado con éxito" };
 }
 
@@ -67,9 +67,9 @@ export async function updateProductAction(productId: string, formData: FormData)
     } catch (error: any) {
         return { success: false, message: error.message };
     }
-    revalidatePath('/dashboard');
-    revalidatePath('/products');
-    revalidatePath(`/products/${productId}/edit`);
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/admin/products');
+    revalidatePath(`/admin/products/${productId}/edit`);
     return { success: true, message: "Producto actualizado con éxito" };
 }
 
@@ -87,8 +87,8 @@ export async function deleteProductAction(productId: string) {
     }
 
     // Revalidamos las rutas para que los cambios se reflejen en la UI
-    revalidatePath('/products');
-    revalidatePath('/dashboard');
+    revalidatePath('/admin/products');
+    revalidatePath('/admin/dashboard');
 
     return { success: true, message: "Producto eliminado con éxito." };
 }

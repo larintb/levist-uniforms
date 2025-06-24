@@ -1,4 +1,4 @@
-// app/(admin)/products/new/page.tsx
+// app/admin/products/new/page.tsx
 import { createClient } from '@/lib/supabase/server';
 import { ProductForm } from '@/components/admin/ProductForm';
 

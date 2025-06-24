@@ -1,42 +1,32 @@
-// middleware.ts
+// middleware.ts (versión corregida y actualizada)
+
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
   const { supabase, response } = await createClient(request)
-
-  // Refresca la sesión del usuario si ha expirado.
   const { data: { session } } = await supabase.auth.getSession()
-
   const { pathname } = request.nextUrl;
 
-  // Si el usuario no está autenticado y está tratando de acceder a una ruta protegida
-  // del panel de administración (que no sea la página de login)...
-  if (!session && (pathname.startsWith('/dashboard') || pathname.startsWith('/products') || pathname.startsWith('/catalog') || pathname.startsWith('/orders'))) {
-    // ...lo redirigimos a la página de login.
+  // Si no hay sesión y se intenta acceder al admin, redirigir a /login
+  if (!session && pathname.startsWith('/admin')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/login' // <-- CAMBIO AQUÍ
     return NextResponse.redirect(url)
   }
 
-  // Si el usuario está autenticado y trata de ir a la página de login...
-  if (session && pathname === '/login') {
-    // ...lo redirigimos al dashboard.
+  // Si hay sesión y se intenta acceder a /login, redirigir al dashboard
+  if (session && pathname === '/login') { // <-- CAMBIO AQUÍ
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/admin/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // Si no se cumple ninguna de las condiciones anteriores, permite que la petición continúe.
   return response
 }
 
-// Configuración para que el middleware solo se ejecute en las rutas necesarias.
 export const config = {
   matcher: [
-    /*
-     * Coincide con todas las rutas de petición excepto las de archivos estáticos.
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

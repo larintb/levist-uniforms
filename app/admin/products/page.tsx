@@ -1,4 +1,4 @@
-// app/(admin)/products/page.tsx
+// app/admin/products/page.tsx
 import { createClient } from '@/lib/supabase/server';
 import { ProductsList } from '@/components/admin/ProductsList';
 import Link from 'next/link';
@@ -50,7 +50,7 @@ export default async function ProductsPage() {
                     <h1 className="text-4xl font-bold text-gray-900">Productos</h1>
                     <p className="text-lg text-gray-600">Gestiona el catálogo de productos de tu tienda.</p>
                 </div>
-                <Link href="/products/new" className="flex items-center justify-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow">
+                <Link href="/admin/products/new" className="flex items-center justify-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow">
                     <PlusIcon />
                     Crear Producto
                 </Link>
