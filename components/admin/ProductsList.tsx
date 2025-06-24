@@ -33,7 +33,7 @@ export function ProductsList({ products }: { products: ProductWithDetails[] }) {
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">No hay productos todavía</h3>
                 <p className="mt-1 text-sm text-gray-500">Comienza por añadir tu primer producto al catálogo.</p>
                 <div className="mt-6">
-                    <Link href="/admin/products/new" className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    <Link href="/admin/products/new" className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                         <PlusIcon className="h-5 w-5"/>
                         Crear Producto
                     </Link>
