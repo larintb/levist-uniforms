@@ -1,8 +1,7 @@
-// components/admin/Sidebar.tsx
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image'; // Importamos el componente Image
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 import { signout } from '@/app/login/actions';
@@ -15,10 +14,15 @@ const MenuIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns
 const TagIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>;
 const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0-3-3m0 0 3-3m-3 3H9" /></svg>;
 
+// ¡NUEVO! Icono para el buscador de productos.
+const BarcodeIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.5A.75.75 0 0 1 4.5 3.75h15a.75.75 0 0 1 .75.75v15a.75.75 0 0 1-.75.75h-15a.75.75 0 0 1-.75-.75v-15Zm3.75 3a.75.75 0 0 0-1.5 0v9a.75.75 0 0 0 1.5 0v-9Zm3.75 0a.75.75 0 0 0-1.5 0v9a.75.75 0 0 0 1.5 0v-9Zm3.75 0a.75.75 0 0 0-1.5 0v9a.75.75 0 0 0 1.5 0v-9Z" /></svg>;
 
+
+// ¡ACTUALIZADO! Se añade el nuevo enlace a la lista de navegación.
 const navLinks = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon },
   { name: 'Productos', href: '/admin/products', icon: PackageIcon },
+  { name: 'Consulta', href: '/admin/consulta', icon: BarcodeIcon },
   { name: 'Catálogo', href: '/admin/catalog', icon: TagIcon },
   { name: 'Órdenes', href: '/admin/orders', icon: ShoppingCartIcon },
 ];
@@ -42,6 +46,7 @@ export function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         </div>
         <ul className="space-y-2 flex-1">
           {navLinks.map((link) => {
+            // El `pathname` puede ser '/admin/products/new', por lo que `startsWith` es la mejor opción.
             const isActive = pathname.startsWith(link.href);
             return (
               <li key={link.name}>

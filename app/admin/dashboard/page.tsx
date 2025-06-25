@@ -84,10 +84,10 @@ export default function AdminDashboardPage() {
           <div className="w-full md:w-auto flex items-center gap-4">
             <input
               type="text"
-              placeholder="Buscar por producto, SKU..."
+              placeholder="Buscar por producto"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-12 pr-32 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600"
             />
             <Link href="/admin/products/new" className="flex items-center justify-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow">
               <PlusIcon />
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
                          {item.stock}
                        </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">${item.price.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-500">${item.price.toFixed(2)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       {/* CORRECCIÓN: El enlace ahora usa el `product_id` para ir a la página de edición correcta. */}
                       <Link href={`/admin/products/${item.product_id}/edit`} className="text-indigo-600 hover:text-indigo-900">

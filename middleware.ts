@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Si no hay sesión y se intenta acceder al admin, redirigir a /login
-  if (!session && pathname.startsWith('/admin')) {
+  if (!session && pathname === '/admin') {
     const url = request.nextUrl.clone()
     url.pathname = '/login' // <-- CAMBIO AQUÍ
     return NextResponse.redirect(url)
