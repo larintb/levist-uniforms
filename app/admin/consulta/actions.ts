@@ -4,9 +4,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-// --- Tipos de Datos ---
-
-// Tipo para un producto (el que ya tenías)
+// --- Tipos de Datos (Sin cambios) ---
 type ProductDetails = {
     inventory_id: string;
     product_id: string;
@@ -24,7 +22,6 @@ type ProductDetails = {
     barcode: string;
 };
 
-// Tipo para los detalles de una orden (basado en tu función)
 type OrderDetails = {
     order_id: string;
     order_date: string;
@@ -47,24 +44,19 @@ type OrderDetails = {
     }[];
 };
 
-// Tipo para la respuesta de nuestra nueva función
+// --- CAMBIO: Tipo de la respuesta con tipos específicos ---
 type SearchResult = {
     success: boolean;
     type?: 'product' | 'order';
+    // Se reemplaza 'any' por una unión de los tipos posibles.
     data?: ProductDetails | OrderDetails;
     message?: string;
 }
 
-// --- Funciones Auxiliares ---
-
-// Una función simple para verificar si un string parece un UUID.
-// Los IDs de Supabase suelen tener este formato.
 function isUUID(term: string): boolean {
     const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     return uuidRegex.test(term);
 }
-
-// --- Acción Principal del Servidor ---
 
 export async function searchAction(term: string): Promise<SearchResult> {
     if (!term || !term.trim()) {
@@ -73,29 +65,21 @@ export async function searchAction(term: string): Promise<SearchResult> {
 
     const supabase = await createClient();
 
-    // Si el término parece un ID de orden, buscamos la orden.
     if (isUUID(term)) {
         try {
-            const { data, error } = await supabase
-                .from('full_order_details')
-                .select('*')
-                .eq('order_id', term);
-
+            // ... (lógica de búsqueda de orden sin cambios)
+            const { data, error } = await supabase.from('full_order_details').select('*').eq('order_id', term);
+            
             if (error || !data || data.length === 0) {
-                if (error) console.error("Error fetching order:", error);
-                return { success: false, message: "Orden no encontrada." };
+                 if (error) console.error("Error fetching order:", error);
+                 return { success: false, message: "Orden no encontrada." };
             }
 
-            // Procesamos los datos como en tu función getOrderDetails
             const orderInfo = data[0];
             let schoolName: string | undefined = undefined;
 
             if (orderInfo.school_id) {
-                const { data: schoolData } = await supabase
-                    .from('schools')
-                    .select('name')
-                    .eq('id', orderInfo.school_id)
-                    .single();
+                const { data: schoolData } = await supabase.from('schools').select('name').eq('id', orderInfo.school_id).single();
                 schoolName = schoolData?.name;
             }
             
@@ -123,31 +107,28 @@ export async function searchAction(term: string): Promise<SearchResult> {
 
             return { success: true, type: 'order', data: orderDetails };
 
-        } catch (e: any) {
-            console.error('Error en la búsqueda de orden:', e.message);
+        // --- CAMBIO: Manejo de errores sin 'any' ---
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Error desconocido al buscar la orden.";
+            console.error('Error en la búsqueda de orden:', message);
             return { success: false, message: "Error al conectar con la base de datos." };
         }
-    }
-    // Si no, asumimos que es un código de barras y buscamos el producto.
-    else {
+    } else {
         try {
-            const { data, error } = await supabase
-                .from('full_inventory_details')
-                .select('*')
-                .eq('barcode', term)
-                .single();
+            const { data, error } = await supabase.from('full_inventory_details').select('*').eq('barcode', term).single();
 
             if (error) {
-                // Producto no encontrado
                 if (error.code === 'PGRST116') {
                     return { success: false, message: "Producto no encontrado." };
                 }
                 throw error;
             }
-
             return { success: true, type: 'product', data: data as ProductDetails };
-        } catch (e: any) {
-            console.error('Error en la búsqueda por código de barras:', e.message);
+
+        // --- CAMBIO: Manejo de errores sin 'any' ---
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Error desconocido al buscar el producto.";
+            console.error('Error en la búsqueda por código de barras:', message);
             return { success: false, message: "Error al conectar con la base de datos." };
         }
     }
