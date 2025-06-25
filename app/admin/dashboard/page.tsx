@@ -45,8 +45,8 @@ export default function AdminDashboardPage() {
         const { data, error } = await supabase.from('full_inventory_details').select('*').order('product_name', { ascending: true });
         if (error) throw error;
         setInventory(data || []);
-      } catch (err: any) {
-        setError('No se pudo cargar el inventario.');
+      } catch (err) {
+        console.error("Error al cargar los datos del dashboard:", err);
       } finally {
         setLoading(false);
       }

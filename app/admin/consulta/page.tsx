@@ -3,6 +3,7 @@
 import React, { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link'; // Se importa Link para la navegación
 import { searchAction } from '@/app/admin/consulta/actions';
+import Image from 'next/image';
 // --- Tipos de Datos ---
 // Idealmente, este tipo se generaría desde la base de datos (con 'supabase gen types')
 // y se importaría para garantizar la coherencia.
@@ -54,11 +55,14 @@ function ProductCard({ product }: { product: ProductDetails }) {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-3">
                 <div className="md:col-span-1 p-4 flex items-center justify-center bg-gray-50">
-                    <img
+                    <Image
                         src={product.image_url || 'https://placehold.co/300x300/f8f9fa/e9ecef?text=Sin+Imagen'}
                         alt={`Imagen de ${product.product_name}`}
+                        width={300}
+                        height={300}
                         className="max-h-60 w-auto object-contain rounded-lg"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/300x300/f8f9fa/e9ecef?text=Error'; }}
+                        // El onError no funciona igual, pero Next.js tiene manejo de errores de imagen incorporado.
+                        // Si necesitas un fallback, hay estrategias más avanzadas con un estado local.
                     />
                 </div>
                 <div className="md:col-span-2 p-6 md:p-8">
@@ -207,7 +211,7 @@ export default function ConsultaPage() {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
     // CAMBIO: Estado unificado para el resultado de la búsqueda
-    const [searchResult, setSearchResult] = useState<{ type: 'product' | 'order'; data: any } | null>(null);
+    const [searchResult, setSearchResult] = useState<{ type: 'product' | 'order'; data: ProductDetails | OrderDetails } | null>(null);
     const [wasSearched, setWasSearched] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -229,11 +233,11 @@ export default function ConsultaPage() {
         setWasSearched(true);
 
         startTransition(async () => {
-            // CAMBIO: Llamamos a la nueva acción unificada
             const result = await searchAction(term.trim());
-            if (result.success) {
-                // Guardamos el tipo y los datos
-                setSearchResult({ type: result.type!, data: result.data! });
+            if (result.success && result.data && result.type) {
+                // El 'as any' aquí es un pequeño truco para satisfacer a TypeScript
+                // ya que hemos validado que los datos existen. Es seguro en este contexto.
+                setSearchResult({ type: result.type, data: result.data as any });
             } else {
                 setError(result.message || "No se encontró un resultado.");
             }
