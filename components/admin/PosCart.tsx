@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { CartItem } from '@/app/admin/pos/page';
+import Image from 'next/image'
 
 // --- ¡CORRECCIÓN! Se añaden las propiedades que faltaban a la interfaz ---
 interface PosCartProps {
@@ -44,10 +45,12 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
                     <ul className="space-y-4">
                         {items.map(item => (
                             <li key={item.inventory_id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                                <img
+                                <Image
                                     src={item.image_url || 'https://placehold.co/64x64/e2e8f0/e2e8f0'}
                                     alt={item.name}
                                     className="h-16 w-16 rounded-md object-cover bg-gray-200"
+                                    width={64}
+                                    height={64}
                                 />
                                 <div className="flex-grow">
                                     <p className="font-semibold text-gray-800 text-sm">{item.name}</p>

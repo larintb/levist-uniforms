@@ -5,9 +5,26 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // --- Tipos de Datos ---
+interface School {
+    id: string;
+    name: string;
+}
+
+interface InventoryItem {
+    inventory_id: string;
+    product_id: string;
+    product_name: string;
+    image_url: string;
+    size: string;
+    color: string;
+    price: number;
+    stock: number;
+    barcode: string;
+}
+
 type FindResult = {
     success: boolean;
-    data?: any;
+    data?: InventoryItem;
     message?: string;
 };
 
@@ -46,7 +63,7 @@ export type SalePayload = {
 
 // --- NUEVO ---
 // Acción para obtener la lista de escuelas
-export async function getSchools() {
+export async function getSchools(): Promise<School[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('schools')
@@ -57,7 +74,7 @@ export async function getSchools() {
         console.error("Error fetching schools:", error);
         return [];
     }
-    return data;
+    return data as School[];
 }
 
 // --- Acción para buscar productos (sin cambios) ---
@@ -86,10 +103,11 @@ export async function findProductByBarcode(barcode: string): Promise<FindResult>
             return { success: false, message: "Producto sin stock disponible." };
         }
 
-        return { success: true, data: data };
+        return { success: true, data: data as InventoryItem };
 
-    } catch (e: any) {
-        console.error('Error en findProductByBarcode:', e.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        console.error('Error en findProductByBarcode:', errorMessage);
         return { success: false, message: "Error de conexión con la base de datos." };
     }
 }
@@ -139,8 +157,9 @@ export async function processSaleAction(payload: SalePayload): Promise<SaleResul
 
         return { success: true, orderId: newOrderId, message: "Venta registrada con éxito." };
 
-    } catch (e: any) {
-        console.error("Error catastrófico en processSaleAction:", e.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        console.error("Error catastrófico en processSaleAction:", errorMessage);
         return { success: false, message: "Ocurrió un error inesperado en el servidor." };
     }
 }
