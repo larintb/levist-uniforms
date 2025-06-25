@@ -42,8 +42,8 @@ export async function createProductAction(formData: FormData) {
         if (inventoryError) throw inventoryError;
       }
     }
-  } catch (error: any) {
-    return { success: false, message: error.message };
+  } catch (error) {
+    console.error("Error creando producto:", error);
   }
   revalidatePath('/admin/dashboard');
   revalidatePath('/admin/products');
@@ -123,9 +123,9 @@ export async function updateProductAction(productId: string, formData: FormData)
         // para manejar esos casos de forma segura, que podemos implementar más adelante.
         // El objetivo principal (arreglar el error de actualización) está resuelto.
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error actualizando producto:", error);
-        return { success: false, message: `Error al actualizar: ${error.message}` };
+        return { success: false, message: `Error al actualizar: ${error instanceof Error ? error.message : String(error)}` };
     }
 
     // Revalidar todas las rutas afectadas para mostrar los datos actualizados.
