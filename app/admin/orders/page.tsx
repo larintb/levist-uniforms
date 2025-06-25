@@ -1,11 +1,30 @@
+// app/admin/orders/page.tsx
 import { createClient } from "@/lib/supabase/server";
 import Link from 'next/link';
 import React from 'react';
 
-// Forzamos el renderizado dinámico para asegurar que la lista de órdenes esté siempre actualizada.
 export const dynamic = "force-dynamic";
 
-// --- Iconos para la UI ---
+// --- Componente para la Insignia de Estado (Badge) ---
+const StatusBadge = ({ status }: { status: string | null }) => {
+    const statusInfo = {
+        COMPLETED: { text: 'Completado', color: 'bg-green-100 text-green-800 border border-green-200' },
+        PENDING_EMBROIDERY: { text: 'Pendiente Bordado', color: 'bg-yellow-100 text-yellow-800 border border-yellow-200' },
+        PENDING_SUPPLIER: { text: 'Pedido a Proveedor', color: 'bg-blue-100 text-blue-800 border border-blue-200' },
+        READY_FOR_PICKUP: { text: 'Listo para Entrega', color: 'bg-indigo-100 text-indigo-800 border border-indigo-200' },
+        DELIVERED: { text: 'Entregado', color: 'bg-gray-100 text-gray-800 border border-gray-200' },
+    };
+
+    const currentStatus = statusInfo[status as keyof typeof statusInfo] || { text: status || 'Desconocido', color: 'bg-gray-100 text-gray-800 border border-gray-200' };
+
+    return (
+        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${currentStatus.color}`}>
+            {currentStatus.text}
+        </span>
+    );
+};
+
+// --- Iconos (sin cambios) ---
 const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -17,50 +36,24 @@ const DocumentTextIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-
-// --- ¡FUNCIÓN ACTUALIZADA! ---
-// Ahora usamos la vista 'full_order_details' y procesamos los datos para obtener órdenes únicas.
+// --- FUNCIÓN MEJORADA ---
+// Ahora consultamos directamente la tabla 'orders' para obtener la cabecera,
+// incluyendo el nuevo campo 'status'. Es más eficiente para esta vista de lista.
 async function getOrders() {
     const supabase = await createClient();
     
-    // 1. Obtenemos todos los ítems de todas las órdenes desde la vista.
     const { data, error } = await supabase
-        .from('full_order_details')
-        .select('*')
-        .order('order_date', { ascending: false });
+        .from('orders')
+        .select('*, users(full_name)') // Hacemos un JOIN implícito con la tabla users
+        .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching from full_order_details view:', error);
+        console.error('Error fetching orders:', error);
         return [];
     }
-
-    if (!data) {
-        return [];
-    }
-    
-    // 2. Procesamos los resultados para obtener una lista de órdenes únicas.
-    //    La vista devuelve una fila por cada ítem, así que las agrupamos por 'order_id'.
-    const uniqueOrdersMap = new Map();
-    
-    data.forEach(item => {
-        if (!uniqueOrdersMap.has(item.order_id)) {
-            uniqueOrdersMap.set(item.order_id, {
-                id: item.order_id,
-                created_at: item.order_date,
-                total: item.order_total,
-                payment_method: item.payment_method,
-                customer_name: item.customer_name,
-                // Adaptamos la estructura para que coincida con lo que el componente espera
-                users: { full_name: item.seller_name } 
-            });
-        }
-    });
-
-    // 3. Convertimos el mapa de vuelta a un array.
-    return Array.from(uniqueOrdersMap.values());
+    return data || [];
 }
 
-// --- Componente de la Página ---
 export default async function OrdersPage() {
     const orders = await getOrders();
 
@@ -68,7 +61,7 @@ export default async function OrdersPage() {
         <div className="p-4 md:p-8">
             <header className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Historial de Órdenes</h1>
-                <p className="text-lg text-gray-600 mt-1">Aquí puedes ver todas las ventas registradas en el sistema.</p>
+                <p className="text-lg text-gray-700 mt-1">Aquí puedes ver y gestionar todas las ventas y pedidos.</p>
             </header>
 
             <main className="bg-white rounded-2xl shadow-lg ring-1 ring-gray-900/5">
@@ -80,7 +73,7 @@ export default async function OrdersPage() {
                                     <Link href={`/admin/orders/${order.id}`} className="block hover:bg-gray-50 transition-colors">
                                         <div className="flex items-center p-4 sm:p-6">
                                             <div className="flex-shrink-0">
-                                                <div className={`flex items-center justify-center h-12 w-12 rounded-full ${ order.payment_method === 'Efectivo' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 text-blue-700">
                                                     <DocumentTextIcon className="h-6 w-6"/>
                                                 </div>
                                             </div>
@@ -89,35 +82,29 @@ export default async function OrdersPage() {
                                                     <p className="text-sm font-bold text-indigo-600 truncate">
                                                         Orden #{order.id.slice(0, 8)}
                                                     </p>
-                                                    <p className="mt-1 flex items-center text-sm text-gray-500">
+                                                    <p className="mt-1 flex items-center text-sm text-gray-700 font-medium">
                                                         <span>{new Date(order.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</span>
                                                     </p>
                                                 </div>
                                                 <div className="hidden md:block">
-                                                    <div>
-                                                        <p className="text-sm text-gray-900">
-                                                            Cliente: <span className="font-medium">{order.customer_name || 'Mostrador'}</span>
-                                                        </p>
-                                                        <p className="mt-1 text-sm text-gray-500">
-                                                            Vendedor: <span className="font-medium">{(order.users as any)?.full_name || 'N/A'}</span>
-                                                        </p>
-                                                    </div>
+                                                    <p className="text-sm text-gray-900">
+                                                        Cliente: <span className="font-semibold text-gray-800">{order.customer_name || 'Mostrador'}</span>
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-gray-900">
+                                                        Vendedor: <span className="font-semibold text-gray-800">{(order.users as any)?.full_name || 'N/A'}</span>
+                                                    </p>
                                                 </div>
-                                                 <div className="text-right">
-                                                    <p className="text-lg font-semibold text-gray-900">
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-gray-900">
                                                         ${(order.total as number).toFixed(2)}
                                                     </p>
-                                                     <p className="mt-1 text-sm">
-                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                            order.payment_method === 'Efectivo' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                                                        }`}>
-                                                            {order.payment_method || 'N/A'}
-                                                        </span>
-                                                     </p>
+                                                    <div className="mt-2">
+                                                       <StatusBadge status={order.status} />
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="ml-5 flex-shrink-0">
-                                                <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                                                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
                                             </div>
                                         </div>
                                     </Link>
@@ -126,8 +113,8 @@ export default async function OrdersPage() {
                         </ul>
                     ) : (
                         <div className="text-center py-12 px-6">
-                            <h3 className="text-lg font-medium text-gray-900">No hay órdenes registradas</h3>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <h3 className="text-lg font-semibold text-gray-900">No hay órdenes registradas</h3>
+                            <p className="mt-1 text-sm text-gray-700">
                                 Cuando se complete una venta en el Punto de Venta, aparecerá aquí.
                             </p>
                         </div>
