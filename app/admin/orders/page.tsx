@@ -5,6 +5,20 @@ import React from 'react';
 
 export const dynamic = "force-dynamic";
 
+// --- Type Definitions ---
+interface User {
+    full_name: string;
+}
+
+interface Order {
+    id: string;
+    created_at: string;
+    customer_name: string | null;
+    total: number;
+    status: string | null;
+    users: User | null;
+}
+
 // --- Componente para la Insignia de Estado (Badge) ---
 const StatusBadge = ({ status }: { status: string | null }) => {
     const statusInfo = {
@@ -13,7 +27,7 @@ const StatusBadge = ({ status }: { status: string | null }) => {
         PENDING_SUPPLIER: { text: 'Pedido a Proveedor', color: 'bg-blue-100 text-blue-800 border border-blue-200' },
         READY_FOR_PICKUP: { text: 'Listo para Entrega', color: 'bg-indigo-100 text-indigo-800 border border-indigo-200' },
         DELIVERED: { text: 'Entregado', color: 'bg-gray-100 text-gray-800 border border-gray-200' },
-    };
+    } as const;
 
     const currentStatus = statusInfo[status as keyof typeof statusInfo] || { text: status || 'Desconocido', color: 'bg-gray-100 text-gray-800 border border-gray-200' };
 
@@ -39,7 +53,7 @@ const DocumentTextIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // --- FUNCIÓN MEJORADA ---
 // Ahora consultamos directamente la tabla 'orders' para obtener la cabecera,
 // incluyendo el nuevo campo 'status'. Es más eficiente para esta vista de lista.
-async function getOrders() {
+async function getOrders(): Promise<Order[]> {
     const supabase = await createClient();
     
     const { data, error } = await supabase
@@ -51,7 +65,7 @@ async function getOrders() {
         console.error('Error fetching orders:', error);
         return [];
     }
-    return data || [];
+    return (data as Order[]) || [];
 }
 
 export default async function OrdersPage() {
@@ -91,12 +105,12 @@ export default async function OrdersPage() {
                                                         Cliente: <span className="font-semibold text-gray-800">{order.customer_name || 'Mostrador'}</span>
                                                     </p>
                                                     <p className="mt-1 text-sm text-gray-900">
-                                                        Vendedor: <span className="font-semibold text-gray-800">{(order.users as any)?.full_name || 'N/A'}</span>
+                                                        Vendedor: <span className="font-semibold text-gray-800">{order.users?.full_name || 'N/A'}</span>
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-lg font-bold text-gray-900">
-                                                        ${(order.total as number).toFixed(2)}
+                                                        ${order.total.toFixed(2)}
                                                     </p>
                                                     <div className="mt-2">
                                                        <StatusBadge status={order.status} />

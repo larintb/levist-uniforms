@@ -29,6 +29,19 @@ type School = {
     name: string;
 };
 
+// Tipo para los datos del producto que vienen del servidor
+interface ProductData {
+    inventory_id: string;
+    product_id: string;
+    product_name: string;
+    image_url: string;
+    size: string;
+    color: string;
+    price: string | number;
+    stock: number;
+    barcode: string;
+}
+
 // --- Iconos (sin cambios) ---
 const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
 // --- NUEVO ---
@@ -41,7 +54,6 @@ const CheckboxIcon = ({ checked }: { checked: boolean }) => (
         )}
     </svg>
 );
-
 
 // --- Componente Principal de la Página POS ---
 export default function PosPage() {
@@ -73,7 +85,9 @@ export default function PosPage() {
     useEffect(() => {
         focusBarcodeInput();
         // Cargar las escuelas cuando el componente se monta
-        getSchools().then(setSchools);
+        getSchools().then(setSchools).catch((error: unknown) => {
+            console.error('Error loading schools:', error);
+        });
     }, []);
 
     // --- MODIFICADO: Mantener foco después de agregar productos al carrito ---
@@ -102,7 +116,7 @@ export default function PosPage() {
                 // Mantener foco incluso cuando hay error
                 focusBarcodeInput();
             } else {
-                const product = result.data;
+                const product = result.data as ProductData;
                 setCart(prevCart => {
                     const existingItem = prevCart.find(item => item.inventory_id === product.inventory_id);
                     if (existingItem) {
@@ -112,7 +126,18 @@ export default function PosPage() {
                                 : item
                         );
                     } else {
-                        return [...prevCart, { ...product, price: parseFloat(product.price), quantity: 1 }];
+                        return [...prevCart, { 
+                            inventory_id: product.inventory_id,
+                            product_id: product.product_id,
+                            name: product.product_name,
+                            image_url: product.image_url,
+                            size: product.size,
+                            color: product.color,
+                            price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
+                            stock: product.stock,
+                            barcode: product.barcode,
+                            quantity: 1
+                        }];
                     }
                 });
                 // El useEffect se encargará de mantener el foco cuando el carrito cambie
@@ -170,7 +195,7 @@ export default function PosPage() {
                 focusBarcodeInput();
             }
         });
-    }
+    };
 
     return (
         <div className="flex flex-col md:flex-row h-screen bg-gray-100 font-sans">

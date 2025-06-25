@@ -1,10 +1,8 @@
-// En: @/app/admin/consulta/actions.ts
-
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
 
-// --- Tipos de Datos (Sin cambios) ---
+// --- Tipos de Datos ---
 type ProductDetails = {
     inventory_id: string;
     product_id: string;
@@ -44,11 +42,29 @@ type OrderDetails = {
     }[];
 };
 
-// --- CAMBIO: Tipo de la respuesta con tipos específicos ---
+type FullOrderDetailsRow = {
+    order_id: string;
+    order_date: string;
+    order_total: string;
+    order_status: string;
+    payment_method: string;
+    seller_name: string;
+    customer_name: string;
+    customer_phone: string;
+    embroidery_notes: string | null;
+    school_id: string | null;
+    item_id: string;
+    product_name: string;
+    sku: string;
+    color: string;
+    size: string;
+    quantity: number;
+    price_at_sale: string;
+};
+
 type SearchResult = {
     success: boolean;
     type?: 'product' | 'order';
-    // Se reemplaza 'any' por una unión de los tipos posibles.
     data?: ProductDetails | OrderDetails;
     message?: string;
 }
@@ -67,20 +83,32 @@ export async function searchAction(term: string): Promise<SearchResult> {
 
     if (isUUID(term)) {
         try {
-            // ... (lógica de búsqueda de orden sin cambios)
-            const { data, error } = await supabase.from('full_order_details').select('*').eq('order_id', term);
+            // CORREGIDO: Removido .returns<>() que no existe en Supabase
+            const { data, error } = await supabase
+                .from('full_order_details')
+                .select('*')
+                .eq('order_id', term);
             
             if (error || !data || data.length === 0) {
                  if (error) console.error("Error fetching order:", error);
                  return { success: false, message: "Orden no encontrada." };
             }
 
-            const orderInfo = data[0];
+            // CORREGIDO: Cast explícito a nuestro tipo
+            const typedData = data as FullOrderDetailsRow[];
+            const orderInfo = typedData[0];
             let schoolName: string | undefined = undefined;
 
             if (orderInfo.school_id) {
-                const { data: schoolData } = await supabase.from('schools').select('name').eq('id', orderInfo.school_id).single();
-                schoolName = schoolData?.name;
+                // CORREGIDO: Removido .single<>() y manejado el tipado correctamente
+                const { data: schoolData } = await supabase
+                    .from('schools')
+                    .select('name')
+                    .eq('id', orderInfo.school_id)
+                    .single();
+                
+                // CORREGIDO: Tipado seguro con verificación
+                schoolName = (schoolData as { name: string } | null)?.name;
             }
             
             const orderDetails: OrderDetails = {
@@ -94,7 +122,8 @@ export async function searchAction(term: string): Promise<SearchResult> {
                 customer_phone: orderInfo.customer_phone,
                 embroidery_notes: orderInfo.embroidery_notes,
                 school_name: schoolName,
-                items: data.map(row => ({
+                // CORREGIDO: Ahora typedData está correctamente tipado
+                items: typedData.map(row => ({
                     item_id: row.item_id,
                     product_name: row.product_name,
                     sku: row.sku,
@@ -107,7 +136,6 @@ export async function searchAction(term: string): Promise<SearchResult> {
 
             return { success: true, type: 'order', data: orderDetails };
 
-        // --- CAMBIO: Manejo de errores sin 'any' ---
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : "Error desconocido al buscar la orden.";
             console.error('Error en la búsqueda de orden:', message);
@@ -115,7 +143,12 @@ export async function searchAction(term: string): Promise<SearchResult> {
         }
     } else {
         try {
-            const { data, error } = await supabase.from('full_inventory_details').select('*').eq('barcode', term).single();
+            // CORREGIDO: Removido .single<>() que no existe
+            const { data, error } = await supabase
+                .from('full_inventory_details')
+                .select('*')
+                .eq('barcode', term)
+                .single();
 
             if (error) {
                 if (error.code === 'PGRST116') {
@@ -123,9 +156,11 @@ export async function searchAction(term: string): Promise<SearchResult> {
                 }
                 throw error;
             }
-            return { success: true, type: 'product', data: data as ProductDetails };
 
-        // --- CAMBIO: Manejo de errores sin 'any' ---
+            // CORREGIDO: Cast explícito a ProductDetails
+            const typedData = data as ProductDetails;
+            return { success: true, type: 'product', data: typedData };
+
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : "Error desconocido al buscar el producto.";
             console.error('Error en la búsqueda por código de barras:', message);
