@@ -16,7 +16,7 @@ export async function login(formData: FormData) {
     return { error: `No se pudo autenticar: ${error.message}` };
   }
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/admin/dashboard')
 }
 
 export async function signup(formData: FormData) {

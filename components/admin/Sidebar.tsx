@@ -17,10 +17,10 @@ const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xml
 
 
 const navLinks = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Productos', href: '/products', icon: PackageIcon },
-  { name: 'Catálogo', href: '/catalog', icon: TagIcon },
-  { name: 'Órdenes', href: '/orders', icon: ShoppingCartIcon },
+  { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon },
+  { name: 'Productos', href: '/admin/products', icon: PackageIcon },
+  { name: 'Catálogo', href: '/admin/catalog', icon: TagIcon },
+  { name: 'Órdenes', href: '/admin/orders', icon: ShoppingCartIcon },
 ];
 
 interface SidebarProps { isCollapsed: boolean; toggleSidebar: () => void; }

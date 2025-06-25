@@ -1,4 +1,4 @@
-// app/(admin)/dashboard/page.tsx
+// app/admin/dashboard/page.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -89,7 +89,7 @@ export default function AdminDashboardPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Link href="/products/new" className="flex items-center justify-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow">
+            <Link href="/admin/products/new" className="flex items-center justify-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow">
               <PlusIcon />
               Crear Producto
             </Link>
@@ -147,7 +147,7 @@ export default function AdminDashboardPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">${item.price.toFixed(2)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       {/* CORRECCIÓN: El enlace ahora usa el `product_id` para ir a la página de edición correcta. */}
-                      <Link href={`/products/${item.product_id}/edit`} className="text-indigo-600 hover:text-indigo-900">
+                      <Link href={`/admin/products/${item.product_id}/edit`} className="text-indigo-600 hover:text-indigo-900">
                         Editar
                       </Link>
                     </td>

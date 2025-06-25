@@ -3,7 +3,7 @@
 
 import React, { useState, useTransition, useEffect } from 'react';
 import Image from 'next/image';
-import { createProductAction, updateProductAction } from '@/app/(admin)/products/actions';
+import { createProductAction, updateProductAction } from '@/app/admin/products/actions';
 import { useRouter } from 'next/navigation';
 
 // --- Tipos ---
@@ -93,7 +93,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
         const result = await action(finalFormData);
         if (result.success) {
             alert(result.message);
-            router.push('/products');
+            router.push('/admin/products');
         } else {
             alert(`Error: ${result.message}`);
         }

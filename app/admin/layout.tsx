@@ -1,4 +1,4 @@
-// app/(admin)/layout.tsx
+// app/admin/layout.tsx
 "use client"; // Convertimos el layout en un Componente de Cliente para manejar el estado
 
 import { Sidebar } from '@/components/admin/Sidebar';

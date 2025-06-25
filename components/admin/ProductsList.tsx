@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useTransition } from 'react';
-import type { ProductWithDetails } from '@/app/(admin)/products/page';
-import { deleteProductAction } from '@/app/(admin)/products/actions';
+import type { ProductWithDetails } from '@/app/admin/products/page';
+import { deleteProductAction } from '@/app/admin/products/actions';
 import Link from 'next/link';
 
 // --- Iconos para la UI ---
@@ -33,7 +33,7 @@ export function ProductsList({ products }: { products: ProductWithDetails[] }) {
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">No hay productos todavía</h3>
                 <p className="mt-1 text-sm text-gray-500">Comienza por añadir tu primer producto al catálogo.</p>
                 <div className="mt-6">
-                    <Link href="/products/new" className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    <Link href="/admin/products/new" className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
                         <PlusIcon className="h-5 w-5"/>
                         Crear Producto
                     </Link>
@@ -61,7 +61,7 @@ export function ProductsList({ products }: { products: ProductWithDetails[] }) {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{product.sku_base}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.collections?.brands?.name || 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                    <Link href={`/products/${product.id}/edit`} className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    <Link href={`/admin/products/${product.id}/edit`} className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
                                         Editar
                                     </Link>
                                     <button
