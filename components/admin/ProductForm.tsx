@@ -192,7 +192,14 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
                 <div className="lg:col-span-1">
                     <label className={`${formLabelStyle} mb-2`}>Vista Previa</label>
                     <div className="mt-2 flex justify-center items-center h-40 w-full rounded-lg border border-dashed border-gray-900/25 bg-gray-50 p-2">
-                        {variant.image_url ? ( <Image src={variant.image_url} alt={`Vista previa de ${variant.color}`} width={150} height={150} className="h-full w-full object-contain rounded-md" onError={(e) => { (e.currentTarget as any).src = 'https://placehold.co/150x150/f8f9fa/e9ecef?text=Error'; }} /> ) : ( <div className="text-center"> <ImageIcon className="mx-auto h-12 w-12 text-gray-300" /> <p className="mt-2 text-xs leading-5 text-gray-600">Sin imagen</p> </div> )}
+                        {variant.image_url ? ( 
+                          <Image 
+                          src={variant.image_url} 
+                          alt={`Vista previa de ${variant.color}`} 
+                          width={150} 
+                          height={150} 
+                          className="h-full w-full object-contain rounded-md" 
+                          onError={(e) => { const target = e.currentTarget as HTMLImageElement; target.src = 'https://placehold.co/150x150/f8f9fa/e9ecef?text=Error'; }} /> ) : ( <div className="text-center"> <ImageIcon className="mx-auto h-12 w-12 text-gray-300" /> <p className="mt-2 text-xs leading-5 text-gray-600">Sin imagen</p> </div> )}
                     </div>
                 </div>
                 <div className="lg:col-span-2 space-y-6">
