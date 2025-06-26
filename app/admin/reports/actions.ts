@@ -15,7 +15,9 @@ interface OrderDetail {
   product_name: string | null;
   price_at_sale: number;
   order_date: string;
-  [key: string]: any; // For any additional fields from the database
+  // Remove the any index signature and define specific fields if needed
+  // If you have other known fields, add them here explicitly
+  // [key: string]: any; // Remove this line
 }
 
 // Define the structure of our report data
@@ -27,7 +29,7 @@ export interface FinancialReport {
   salesByPaymentMethod: { method: string; total: number; count: number }[];
   salesBySeller: { seller: string; total: number; count: number }[];
   topSellingProducts: { product: string; quantity: number; total: number }[];
-  rawOrders: OrderDetail[]; // Updated to use specific type
+  rawOrders: OrderDetail[];
 }
 
 /**

@@ -11,29 +11,33 @@ const formatCurrency = (amount: number) => {
 };
 
 // Define types for table data
+// Added index signature to resolve type assignment error for the Table component.
 interface PaymentMethodData {
   method: string;
   total: number;
   count: number;
+  [key: string]: string | number; // Added index signature
 }
 
 interface SellerData {
   seller: string;
   total: number;
   count: number;
+  [key: string]: string | number; // Added index signature
 }
 
 interface ProductData {
   product: string;
   quantity: number;
   total: number;
+  [key: string]: string | number; // Added index signature
 }
 
 // Column configuration type
 interface ColumnConfig<T> {
   header: string;
   accessor: keyof T;
-  format?: (value: any) => string;
+  format?: (value: T[keyof T]) => string; // Use the actual type from T
 }
 
 // --- Reusable UI Components ---
@@ -64,12 +68,12 @@ export default async function ReportsPage({
 }) {
   // Await searchParams before using its properties
   const params = await searchParams;
-  
+
   // Get dates from URL search parameters, with fallbacks to the current month
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
   const todayStr = today.toISOString().split('T')[0];
-  
+
   // Safely access searchParams with defaults
   const startDate = params.startDate || firstDayOfMonth;
   const endDate = params.endDate || todayStr;
@@ -172,7 +176,7 @@ const PaymentMethodTable = ({ data }: { data: PaymentMethodData[] }) => {
   const columns: ColumnConfig<PaymentMethodData>[] = [
     { header: 'Method', accessor: 'method' },
     { header: 'Transactions', accessor: 'count' },
-    { header: 'Total Value', accessor: 'total', format: formatCurrency },
+    { header: 'Total Value', accessor: 'total', format: (value) => formatCurrency(value as number) },
   ];
   return <Table data={data} columns={columns} />;
 };
@@ -181,7 +185,7 @@ const SellerTable = ({ data }: { data: SellerData[] }) => {
   const columns: ColumnConfig<SellerData>[] = [
     { header: 'Seller', accessor: 'seller' },
     { header: 'Items Sold', accessor: 'count' },
-    { header: 'Total Value', accessor: 'total', format: formatCurrency },
+    { header: 'Total Value', accessor: 'total', format: (value) => formatCurrency(value as number) },
   ];
   return <Table data={data} columns={columns} />;
 };
@@ -190,18 +194,18 @@ const ProductTable = ({ data }: { data: ProductData[] }) => {
   const columns: ColumnConfig<ProductData>[] = [
     { header: 'Product', accessor: 'product' },
     { header: 'Quantity Sold', accessor: 'quantity' },
-    { header: 'Total Revenue', accessor: 'total', format: formatCurrency },
+    { header: 'Total Revenue', accessor: 'total', format: (value) => formatCurrency(value as number) },
   ];
   return <Table data={data} columns={columns} />;
 };
 
 // A generic table component for reusability
-const Table = <T extends Record<string, any>>({ 
-  data, 
-  columns 
-}: { 
-  data: T[]; 
-  columns: ColumnConfig<T>[] 
+const Table = <T extends Record<string, string | number>>({
+  data,
+  columns
+}: {
+  data: T[];
+  columns: ColumnConfig<T>[]
 }) => {
   if (!data || data.length === 0) {
     return <p className="text-gray-500 dark:text-gray-400">No data available for this period.</p>;
