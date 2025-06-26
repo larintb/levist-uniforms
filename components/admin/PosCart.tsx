@@ -1,29 +1,34 @@
+// components/admin/PosCart.tsx
 "use client";
 
 import React, { useState } from 'react';
 import type { CartItem } from '@/app/admin/pos/page';
-import Image from 'next/image'
+import Image from 'next/image';
 
-// --- ¡CORRECCIÓN! Se añaden las propiedades que faltaban a la interfaz ---
+// --- MODIFICADO ---
+// Se añaden las propiedades subtotal, iva y total que vienen desde la página principal.
 interface PosCartProps {
     items: CartItem[];
     updateQuantity: (inventoryId: string, newQuantity: number) => void;
     removeItem: (inventoryId: string) => void;
     processSale: (paymentMethod: string) => void;
     isProcessing: boolean;
+    subtotal: number;
+    iva: number;
+    total: number;
 }
 
 // --- Iconos ---
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09.982-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>;
 const ShoppingBagIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>;
 
-export function PosCart({ items, updateQuantity, removeItem, processSale, isProcessing }: PosCartProps) {
+export function PosCart({ items, updateQuantity, removeItem, processSale, isProcessing, subtotal, iva, total }: PosCartProps) {
     const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('Efectivo');
 
-    const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    const tax = subtotal * 0.16;
-    const total = subtotal + tax;
+    // --- CORRECCIÓN ---
+    // Se eliminó el cálculo local de subtotal, tax y total.
+    // Ahora el componente usa los valores que recibe a través de los props.
     
     const handleConfirmCheckout = () => {
         processSale(paymentMethod);
@@ -61,7 +66,7 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
                                     <input
                                         type="number"
                                         value={item.quantity}
-                                        onChange={(e) => updateQuantity(item.inventory_id, parseInt(e.target.value, 10))}
+                                        onChange={(e) => updateQuantity(item.inventory_id, parseInt(e.target.value, 10) || 1)}
                                         className="w-14 text-center border rounded-md placeholder:text-gray-500"
                                         placeholder="1"
                                         min="1"
@@ -109,10 +114,12 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
                 </div>
                 <div className="flex justify-between text-gray-600">
                     <span>IVA (16%)</span>
-                    <span>${tax.toFixed(2)}</span>
+                    {/* --- CORRECCIÓN --- Se usa el prop 'iva' */}
+                    <span>${iva.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-2xl text-gray-800">
                     <span>Total</span>
+                    {/* --- CORRECCIÓN --- Se usa el prop 'total' */}
                     <span>${total.toFixed(2)}</span>
                 </div>
                 <button 
@@ -123,12 +130,12 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
                 </button>
             </div>
              <style jsx>{`
-                @keyframes fade-in-fast {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
-            `}</style>
+                 @keyframes fade-in-fast {
+                     from { opacity: 0; }
+                     to { opacity: 1; }
+                 }
+                 .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
+             `}</style>
         </>
     );
 }

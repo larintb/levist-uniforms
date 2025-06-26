@@ -3,9 +3,8 @@
 
 import React, { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-// --- MODIFICADO ---
-// Se importa la nueva acción y los nuevos tipos
 import { findProductByBarcode, processSaleAction, getSchools, SalePayload } from './actions';
+// Asegúrate de que tu componente PosCart esté implementado para recibir los nuevos props de totales.
 import { PosCart } from '@/components/admin/PosCart';
 
 // --- Tipos de Datos ---
@@ -22,14 +21,11 @@ export type CartItem = {
     quantity: number;
 };
 
-// --- NUEVO ---
-// Tipo para los datos de las escuelas que vienen del servidor
 type School = {
     id: string;
     name: string;
 };
 
-// Tipo para los datos del producto que vienen del servidor
 interface ProductData {
     inventory_id: string;
     product_id: string;
@@ -42,9 +38,8 @@ interface ProductData {
     barcode: string;
 }
 
-// --- Iconos (sin cambios) ---
+// --- Iconos ---
 const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
-// --- NUEVO ---
 const CheckboxIcon = ({ checked }: { checked: boolean }) => (
     <svg className={`h-6 w-6 ${checked ? 'text-indigo-600' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {checked ? (
@@ -63,8 +58,6 @@ export default function PosPage() {
     const barcodeInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
 
-    // --- NUEVO ---
-    // Estados para el formulario de pedido especial
     const [isSpecialOrder, setIsSpecialOrder] = useState(false);
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
@@ -72,9 +65,13 @@ export default function PosPage() {
     const [embroideryNotes, setEmbroideryNotes] = useState('');
     const [schools, setSchools] = useState<School[]>([]);
 
-    // --- MODIFICADO: Función para mantener el foco ---
+    const [requiresInvoice, setRequiresInvoice] = useState(false);
+
+    const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const iva = requiresInvoice ? subtotal * 0.16 : 0;
+    const total = subtotal + iva;
+
     const focusBarcodeInput = () => {
-        // Usamos setTimeout para asegurar que el DOM se haya actualizado
         setTimeout(() => {
             if (barcodeInputRef.current) {
                 barcodeInputRef.current.focus();
@@ -84,28 +81,37 @@ export default function PosPage() {
 
     useEffect(() => {
         focusBarcodeInput();
-        // Cargar las escuelas cuando el componente se monta
-        getSchools().then(setSchools).catch((error: unknown) => {
-            console.error('Error loading schools:', error);
-        });
+        // Se ha mejorado la carga de datos para manejar posibles errores
+        const fetchSchools = async () => {
+            try {
+                const schoolData = await getSchools();
+                setSchools(schoolData);
+            } catch (err) {
+                console.error('Failed to load schools:', err);
+                setError('No se pudieron cargar las escuelas. Intente recargar la página.');
+            }
+        };
+        fetchSchools();
     }, []);
 
-    // --- MODIFICADO: Mantener foco después de agregar productos al carrito ---
     useEffect(() => {
         if (cart.length > 0) {
             focusBarcodeInput();
         }
     }, [cart]);
 
-    const handleSearch = (formData: FormData) => {
+    // MODIFICADO: Se usa un manejador de envío de formulario estándar para mayor claridad
+    const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
         const barcode = formData.get('barcode') as string;
+
         if (!barcode.trim()) return;
         
         setError(null);
         startTransition(async () => {
             const result = await findProductByBarcode(barcode.trim());
             
-            // --- MODIFICADO: Limpiar el input y mantener foco ---
             if (barcodeInputRef.current) {
                 barcodeInputRef.current.value = "";
             }
@@ -113,8 +119,6 @@ export default function PosPage() {
             if (!result.success || !result.data) {
                 setError(result.message || "Producto no encontrado.");
                 setTimeout(() => setError(null), 3000);
-                // Mantener foco incluso cuando hay error
-                focusBarcodeInput();
             } else {
                 const product = result.data as ProductData;
                 setCart(prevCart => {
@@ -140,30 +144,26 @@ export default function PosPage() {
                         }];
                     }
                 });
-                // El useEffect se encargará de mantener el foco cuando el carrito cambie
             }
+            // Siempre se vuelve a enfocar el input después de una búsqueda
+            focusBarcodeInput();
         });
     };
 
-    // --- MODIFICADO: Mantener foco después de interacciones con el carrito ---
     const updateQuantity = (inventoryId: string, newQuantity: number) => {
         setCart(cart.map(item => 
             item.inventory_id === inventoryId 
                 ? { ...item, quantity: newQuantity } 
                 : item
         ).filter(item => item.quantity > 0));
-        // Mantener foco después de actualizar cantidad
         focusBarcodeInput();
     };
 
     const removeItem = (inventoryId: string) => {
         setCart(cart.filter(item => item.inventory_id !== inventoryId));
-        // Mantener foco después de remover item
         focusBarcodeInput();
     };
 
-    // --- MODIFICADO ---
-    // La lógica de procesar la venta ahora usa la nueva acción y los nuevos datos
     const handleProcessSale = (paymentMethod: string) => {
         setError(null);
         
@@ -175,6 +175,7 @@ export default function PosPage() {
                     price_at_sale: item.price
                 })),
                 paymentMethod: paymentMethod,
+                requiresInvoice: requiresInvoice,
                 specialOrderData: {
                     isSpecialOrder: isSpecialOrder,
                     customerName: customerName,
@@ -187,11 +188,9 @@ export default function PosPage() {
             const result = await processSaleAction(payload);
 
             if (result.success && result.orderId) {
-                // Si es exitoso, redirigimos a la página de la orden para ver los detalles
                 router.push(`/admin/orders/${result.orderId}`);
             } else {
                 setError(result.message || "Ocurrió un error desconocido.");
-                // Mantener foco incluso si hay error en la venta
                 focusBarcodeInput();
             }
         });
@@ -206,6 +205,9 @@ export default function PosPage() {
                     removeItem={removeItem}
                     processSale={handleProcessSale}
                     isProcessing={isProcessing}
+                    subtotal={subtotal}
+                    iva={iva}
+                    total={total}
                 />
             </div>
 
@@ -214,7 +216,7 @@ export default function PosPage() {
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Punto de Venta</h1>
                     <p className="text-gray-700 mb-8 font-medium">Escanee un código de barras o ingréselo manualmente para añadirlo a la venta.</p>
 
-                    <form action={handleSearch} className='mb-8'>
+                    <form onSubmit={handleSearchSubmit} className='mb-8'>
                         <div className="relative">
                             <input
                                 ref={barcodeInputRef}
@@ -224,9 +226,7 @@ export default function PosPage() {
                                 className="w-full pl-12 pr-32 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600"
                                 disabled={isProcessing}
                                 autoComplete="off"
-                                // --- NUEVO: Mantener foco en eventos adicionales ---
                                 onBlur={() => {
-                                    // Si el input pierde el foco, lo recuperamos después de un breve delay
                                     setTimeout(() => {
                                         if (document.activeElement?.tagName !== 'INPUT' && 
                                             document.activeElement?.tagName !== 'SELECT' && 
@@ -242,76 +242,90 @@ export default function PosPage() {
                         </div>
                     </form>
 
-                    {/* --- NUEVO: FORMULARIO PARA PEDIDOS ESPECIALES --- */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <label htmlFor="special-order-toggle" className="flex items-center cursor-pointer">
-                            <CheckboxIcon checked={isSpecialOrder} />
-                            <span className="ml-3 text-lg font-semibold text-gray-900">¿Es un pedido especial? (Bordado/Encargo)</span>
-                            <input
-                                id="special-order-toggle"
-                                type="checkbox"
-                                className="hidden"
-                                checked={isSpecialOrder}
-                                onChange={(e) => setIsSpecialOrder(e.target.checked)}
-                            />
-                        </label>
+                    <div className="space-y-4">
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <label htmlFor="requires-invoice-toggle" className="flex items-center cursor-pointer">
+                                <CheckboxIcon checked={requiresInvoice} />
+                                <span className="ml-3 text-lg font-semibold text-gray-900">¿Requiere Factura? (+16% IVA)</span>
+                                <input
+                                    id="requires-invoice-toggle"
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={requiresInvoice}
+                                    onChange={(e) => setRequiresInvoice(e.target.checked)}
+                                />
+                            </label>
+                        </div>
 
-                        {isSpecialOrder && (
-                            <div className="mt-6 space-y-4 animate-fade-in">
-                                <div>
-                                    <label htmlFor="customerName" className="block text-sm font-semibold text-gray-900 mb-2">Nombre Completo del Cliente*</label>
-                                    <input
-                                        type="text"
-                                        id="customerName"
-                                        value={customerName}
-                                        onChange={(e) => setCustomerName(e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-                                        placeholder="Ej. Juan Pérez"
-                                        // --- NUEVO: Recuperar foco del barcode cuando termine de editar ---
-                                        onBlur={() => focusBarcodeInput()}
-                                    />
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <label htmlFor="special-order-toggle" className="flex items-center cursor-pointer">
+                                <CheckboxIcon checked={isSpecialOrder} />
+                                <span className="ml-3 text-lg font-semibold text-gray-900">¿Es un pedido especial? (Bordado/Encargo)</span>
+                                <input
+                                    id="special-order-toggle"
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={isSpecialOrder}
+                                    onChange={(e) => setIsSpecialOrder(e.target.checked)}
+                                />
+                            </label>
+
+                            {isSpecialOrder && (
+                                <div className="mt-6 space-y-4 animate-fade-in">
+                                    <div>
+                                        <label htmlFor="customerName" className="block text-sm font-semibold text-gray-900 mb-2">Nombre Completo del Cliente*</label>
+                                        <input
+                                            type="text"
+                                            id="customerName"
+                                            value={customerName}
+                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                                            placeholder="Ej. Juan Pérez"
+                                            onBlur={() => focusBarcodeInput()}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="customerPhone" className="block text-sm font-semibold text-gray-900 mb-2">Teléfono de Contacto</label>
+                                        <input
+                                            type="tel"
+                                            id="customerPhone"
+                                            value={customerPhone}
+                                            onChange={(e) => setCustomerPhone(e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                                            placeholder="Ej. 868-123-4567"
+                                            onBlur={() => focusBarcodeInput()}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="schoolId" className="block text-sm font-semibold text-gray-900 mb-2">Escuela (para logo de bordado)</label>
+                                        <select
+                                            id="schoolId"
+                                            value={schoolId ?? ''}
+                                            onChange={(e) => setSchoolId(e.target.value || null)}
+                                            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                                            onBlur={() => focusBarcodeInput()}
+                                        >
+                                            <option value="">Ninguna</option>
+                                            {schools.map(school => (
+                                                <option key={school.id} value={school.id}>{school.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="embroideryNotes" className="block text-sm font-semibold text-gray-900 mb-2">Notas de Bordado / Pedido</label>
+                                        <textarea
+                                            id="embroideryNotes"
+                                            rows={3}
+                                            value={embroideryNotes}
+                                            onChange={(e) => setEmbroideryNotes(e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 resize-none"
+                                            placeholder="Ej. Bordar 'Dr. Juan Pérez' en la filipina."
+                                            onBlur={() => focusBarcodeInput()}
+                                        ></textarea>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label htmlFor="customerPhone" className="block text-sm font-semibold text-gray-900 mb-2">Teléfono de Contacto</label>
-                                    <input
-                                        type="tel"
-                                        id="customerPhone"
-                                        value={customerPhone}
-                                        onChange={(e) => setCustomerPhone(e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-                                        placeholder="Ej. 868-123-4567"
-                                        onBlur={() => focusBarcodeInput()}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="schoolId" className="block text-sm font-semibold text-gray-900 mb-2">Escuela (para logo de bordado)</label>
-                                    <select
-                                        id="schoolId"
-                                        value={schoolId ?? ''}
-                                        onChange={(e) => setSchoolId(e.target.value || null)}
-                                        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
-                                        onBlur={() => focusBarcodeInput()}
-                                    >
-                                        <option value="">Ninguna</option>
-                                        {schools.map(school => (
-                                            <option key={school.id} value={school.id}>{school.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label htmlFor="embroideryNotes" className="block text-sm font-semibold text-gray-900 mb-2">Notas de Bordado / Pedido</label>
-                                    <textarea
-                                        id="embroideryNotes"
-                                        rows={3}
-                                        value={embroideryNotes}
-                                        onChange={(e) => setEmbroideryNotes(e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 resize-none"
-                                        placeholder="Ej. Bordar 'Dr. Juan Pérez' en la filipina."
-                                        onBlur={() => focusBarcodeInput()}
-                                    ></textarea>
-                                </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     {isProcessing && <p className="text-center mt-4 text-gray-800 font-medium">Procesando...</p>}

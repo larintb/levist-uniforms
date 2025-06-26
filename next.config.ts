@@ -21,7 +21,26 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'winkscrubs.com', // Dominio que causa el error.
         port: '',
-        pathname: '/cdn/shop/files/**', // Puedes hacerlo más o menos específico.
+        pathname: '/**', // Puedes hacerlo más o menos específico.
+      },
+      {
+        protocol: 'https',
+        hostname: 'barcomade.com',
+        port: '',
+        pathname: '/cdn/shop/files/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
+      // Si también usas otros servicios de imágenes, agrégalos aquí:
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+        port: '',
+        pathname: '/**',
       },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
