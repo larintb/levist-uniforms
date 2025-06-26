@@ -10,6 +10,32 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+// Define types for table data
+interface PaymentMethodData {
+  method: string;
+  total: number;
+  count: number;
+}
+
+interface SellerData {
+  seller: string;
+  total: number;
+  count: number;
+}
+
+interface ProductData {
+  product: string;
+  quantity: number;
+  total: number;
+}
+
+// Column configuration type
+interface ColumnConfig<T> {
+  header: string;
+  accessor: keyof T;
+  format?: (value: any) => string;
+}
+
 // --- Reusable UI Components ---
 
 // A styled card for displaying key metrics
@@ -54,7 +80,7 @@ export default async function ReportsPage({
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Financial Reports</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            An overview of your business's sales and financial performance.
+            An overview of your business&apos;s sales and financial performance.
           </p>
         </header>
 
@@ -126,35 +152,57 @@ async function ReportContent({ startDate, endDate }: { startDate: string, endDat
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Sales by Payment Method</h2>
-          <Table data={report.salesByPaymentMethod} columns={[
-            { header: 'Method', accessor: 'method' },
-            { header: 'Transactions', accessor: 'count' },
-            { header: 'Total Value', accessor: 'total', format: formatCurrency },
-          ]} />
+          <PaymentMethodTable data={report.salesByPaymentMethod} />
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Sales by Seller</h2>
-          <Table data={report.salesBySeller} columns={[
-            { header: 'Seller', accessor: 'seller' },
-            { header: 'Items Sold', accessor: 'count' },
-            { header: 'Total Value', accessor: 'total', format: formatCurrency },
-          ]} />
+          <SellerTable data={report.salesBySeller} />
         </div>
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md lg:col-span-2">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Top 10 Selling Products</h2>
-          <Table data={report.topSellingProducts} columns={[
-            { header: 'Product', accessor: 'product' },
-            { header: 'Quantity Sold', accessor: 'quantity' },
-            { header: 'Total Revenue', accessor: 'total', format: formatCurrency },
-          ]} />
+          <ProductTable data={report.topSellingProducts} />
         </div>
       </div>
     </>
   );
 }
 
+// Typed table components for different data types
+const PaymentMethodTable = ({ data }: { data: PaymentMethodData[] }) => {
+  const columns: ColumnConfig<PaymentMethodData>[] = [
+    { header: 'Method', accessor: 'method' },
+    { header: 'Transactions', accessor: 'count' },
+    { header: 'Total Value', accessor: 'total', format: formatCurrency },
+  ];
+  return <Table data={data} columns={columns} />;
+};
+
+const SellerTable = ({ data }: { data: SellerData[] }) => {
+  const columns: ColumnConfig<SellerData>[] = [
+    { header: 'Seller', accessor: 'seller' },
+    { header: 'Items Sold', accessor: 'count' },
+    { header: 'Total Value', accessor: 'total', format: formatCurrency },
+  ];
+  return <Table data={data} columns={columns} />;
+};
+
+const ProductTable = ({ data }: { data: ProductData[] }) => {
+  const columns: ColumnConfig<ProductData>[] = [
+    { header: 'Product', accessor: 'product' },
+    { header: 'Quantity Sold', accessor: 'quantity' },
+    { header: 'Total Revenue', accessor: 'total', format: formatCurrency },
+  ];
+  return <Table data={data} columns={columns} />;
+};
+
 // A generic table component for reusability
-const Table = ({ data, columns }: { data: any[], columns: { header: string, accessor: string, format?: (value: any) => string }[] }) => {
+const Table = <T extends Record<string, any>>({ 
+  data, 
+  columns 
+}: { 
+  data: T[]; 
+  columns: ColumnConfig<T>[] 
+}) => {
   if (!data || data.length === 0) {
     return <p className="text-gray-500 dark:text-gray-400">No data available for this period.</p>;
   }
@@ -163,14 +211,14 @@ const Table = ({ data, columns }: { data: any[], columns: { header: string, acce
       <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
-            {columns.map(col => <th key={col.accessor} scope="col" className="px-6 py-3">{col.header}</th>)}
+            {columns.map(col => <th key={String(col.accessor)} scope="col" className="px-6 py-3">{col.header}</th>)}
           </tr>
         </thead>
         <tbody>
           {data.map((row, index) => (
             <tr key={index} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
               {columns.map(col => (
-                <td key={col.accessor} className="px-6 py-4">
+                <td key={String(col.accessor)} className="px-6 py-4">
                   {col.format ? col.format(row[col.accessor]) : row[col.accessor]}
                 </td>
               ))}

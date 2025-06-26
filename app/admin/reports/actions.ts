@@ -5,6 +5,19 @@ import { createClient } from '@/lib/supabase/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { cookies } from 'next/headers';
 
+// Define the structure of our order data
+interface OrderDetail {
+  order_id: number;
+  order_total: number;
+  quantity: number;
+  payment_method: string | null;
+  seller_name: string | null;
+  product_name: string | null;
+  price_at_sale: number;
+  order_date: string;
+  [key: string]: any; // For any additional fields from the database
+}
+
 // Define the structure of our report data
 export interface FinancialReport {
   totalSales: number;
@@ -14,7 +27,7 @@ export interface FinancialReport {
   salesByPaymentMethod: { method: string; total: number; count: number }[];
   salesBySeller: { seller: string; total: number; count: number }[];
   topSellingProducts: { product: string; quantity: number; total: number }[];
-  rawOrders: any[]; // For detailed view/table
+  rawOrders: OrderDetail[]; // Updated to use specific type
 }
 
 /**
@@ -33,7 +46,7 @@ export async function getFinancialReport(
   
   try {
     // Await cookies before creating the Supabase client
-    const cookieStore = await cookies();
+    await cookies(); // Keep this line since it might be needed for the createClient function
     const supabase = await createClient();
 
     // Base query from the detailed order view
@@ -81,7 +94,7 @@ export async function getFinancialReport(
     let totalSales = 0;
     let totalItemsSold = 0;
 
-    orders.forEach(item => {
+    orders.forEach((item: OrderDetail) => {
       // Aggregate total sales and unique orders
       if (!uniqueOrderIds.has(item.order_id)) {
         uniqueOrderIds.add(item.order_id);
@@ -137,7 +150,7 @@ export async function getFinancialReport(
       salesByPaymentMethod: formattedSalesByPaymentMethod,
       salesBySeller: formattedSalesBySeller,
       topSellingProducts: formattedTopSellingProducts,
-      rawOrders: orders,
+      rawOrders: orders as OrderDetail[],
     };
 
   } catch (error) {
