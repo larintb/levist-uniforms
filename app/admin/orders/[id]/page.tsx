@@ -168,9 +168,14 @@ const OrderSummary = ({ details }: { details: OrderDetails }) => (
 );
 
 
-// --- Componente Principal de la Página (Refactorizado) ---
-export default async function OrderDetailPage({ params: { id } }: { params: { id: string } }) {
-    // CORRECCIÓN: Se desestructura `id` directamente de `params`. No se usa `await`.
+// --- Componente Principal de la Página (Refactorizado para Next.js 15) ---
+export default async function OrderDetailPage({ 
+    params 
+}: { 
+    params: Promise<{ id: string }> 
+}) {
+    // CORRECCIÓN: En Next.js 15, params es una Promise y debe ser awaited
+    const { id } = await params;
     const orderDetails = await getOrderDetails(id);
 
     if (!orderDetails) {
