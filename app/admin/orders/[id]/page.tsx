@@ -169,9 +169,8 @@ const OrderSummary = ({ details }: { details: OrderDetails }) => (
 
 
 // --- Componente Principal de la Página (Refactorizado) ---
-export default async function OrderDetailPage({ params }: { params: { id: string } }) {
+export default async function OrderDetailPage({ params: { id } }: { params: { id: string } }) {
     // CORRECCIÓN: Se desestructura `id` directamente de `params`. No se usa `await`.
-    const { id } = params;
     const orderDetails = await getOrderDetails(id);
 
     if (!orderDetails) {
