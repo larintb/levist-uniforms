@@ -13,18 +13,50 @@ const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns
 export function ProductsList({ products }: { products: ProductWithDetails[] }) {
     const [isPending, startTransition] = useTransition();
 
+    const [modal, setModal] = React.useState<{ open: boolean; productId?: string; productName?: string }>({ open: false });
+
     const handleDelete = (productId: string, productName: string) => {
-        if (confirm(`¿Estás seguro de que quieres eliminar el producto "${productName}"? Esta acción es permanente.`)) {
-            startTransition(async () => {
-                const result = await deleteProductAction(productId);
-                if (result.success) {
-                    alert(result.message);
-                } else {
-                    alert(`Error: ${result.message}`);
-                }
-            });
-        }
+        setModal({ open: true, productId, productName });
     };
+
+    const confirmDelete = async () => {
+        if (!modal.productId) return;
+        startTransition(async () => {
+            const result = await deleteProductAction(modal.productId!);
+            alert(result.message);
+            setModal({ open: false });
+        });
+    };
+
+    const closeModal = () => setModal({ open: false });
+
+    // Modal component
+    const ConfirmationModal = () => (
+        modal.open ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+                    <h2 className="text-lg font-semibold mb-2 text-gray-600">¿Eliminar producto?</h2>
+                    <p className="mb-4 text-gray-600">¿Estás seguro de que quieres eliminar el producto <span className="font-bold text-gray-600">&quot;{modal.productName}&quot;</span>? Esta acción es permanente.</p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={closeModal}
+                            className="px-4 py-2 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            disabled={isPending}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={confirmDelete}
+                            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                            disabled={isPending}
+                        >
+                            {isPending ? "Eliminando..." : "Eliminar"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        ) : null
+    );
 
     if (products.length === 0) {
         return (
@@ -38,6 +70,7 @@ export function ProductsList({ products }: { products: ProductWithDetails[] }) {
                         Crear Producto
                     </Link>
                 </div>
+                <ConfirmationModal />
             </div>
         );
     }
@@ -77,6 +110,7 @@ export function ProductsList({ products }: { products: ProductWithDetails[] }) {
                     </tbody>
                 </table>
             </div>
+            <ConfirmationModal />
         </div>
     );
 }

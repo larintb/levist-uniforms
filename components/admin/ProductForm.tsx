@@ -4,6 +4,7 @@ import React, { useState, useTransition, useEffect } from 'react';
 import Image from 'next/image';
 import { createProductAction, updateProductAction } from '@/app/admin/products/actions';
 import { useRouter } from 'next/navigation';
+import toast, { Toaster } from 'react-hot-toast'; // Agregado: Importación de react-hot-toast
 
 // --- Tipos ---
 type Brand = { id: string; name: string; };
@@ -64,7 +65,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // Removido: const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [selectedBrand, setSelectedBrand] = useState<string>(initialData?.collection_id ? collections.find(c => c.id === initialData.collection_id)?.brand_id || '' : '');
 
@@ -112,7 +113,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFormMessage(null);
+    // Removido: setFormMessage(null);
     const formData = new FormData(event.currentTarget);
 
     const variantsData = variants.map(variant => ({
@@ -139,10 +140,10 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
       const result = await action(finalFormData);
 
       if (result.success) {
-        setFormMessage({ type: 'success', text: result.message });
+        toast.success(result.message); // Agregado: Toast de éxito
         setTimeout(() => router.push('/admin/products'), 1500);
       } else {
-        setFormMessage({ type: 'error', text: `Error: ${result.message}` });
+        toast.error(`Error: ${result.message}`); // Agregado: Toast de error
       }
     });
   };
@@ -152,6 +153,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-12">
+      <Toaster /> {/* Agregado: Componente Toaster */}
       <div className="bg-white p-8 rounded-2xl shadow-lg ring-1 ring-gray-900/5">
         <h2 className="text-base font-semibold leading-7 text-gray-900">Información del Producto</h2>
         <p className="mt-1 text-sm leading-6 text-gray-600">Datos generales que definen el producto base.</p>
@@ -233,8 +235,8 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
                         </select>
                       </div>
                       <div className="col-span-12 sm:col-span-4">
-                         <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
-                         <input type="text" name={`barcode-${inv.id}`} placeholder="Escanear o escribir código" defaultValue={inv.barcode ?? ''} className={formInputStyle} onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} />
+                           <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
+                           <input type="text" name={`barcode-${inv.id}`} placeholder="Escanear o escribir código" defaultValue={inv.barcode ?? ''} className={formInputStyle} onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} />
                       </div>
                       <div className="col-span-6 sm:col-span-2">
                         <label className="sm:hidden text-xs font-medium text-gray-500">Stock</label>
@@ -266,11 +268,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
       </div>
 
       <div className="mt-6 flex items-center justify-end gap-x-6">
-        {formMessage && (
-            <div className={`text-sm ${formMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                {formMessage.text}
-            </div>
-        )}
+        {/* Removido: formMessage display */}
         <button type="button" onClick={() => router.back()} disabled={isPending} className="text-sm font-semibold leading-6 text-gray-900">Cancelar</button>
         <button type="submit" disabled={isPending} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-400">
           {isPending ? "Guardando..." : (initialData ? "Actualizar Producto" : "Crear Producto")}

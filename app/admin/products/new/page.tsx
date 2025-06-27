@@ -17,7 +17,7 @@ export default async function NewProductPage() {
   ] = await Promise.all([brandsPromise, collectionsPromise, categoriesPromise]);
 
   if (brandsError || collectionsError || categoriesError) {
-    console.error({ brandsError, collectionsError, categoriesError });
+    console.error({ brandsError, collectionsError, categoriesWrapperError: categoriesError });
     return (
       <div className="p-8"><p className="text-red-600 bg-red-100 p-4 rounded-lg">Error al cargar datos.</p></div>
     );
@@ -30,9 +30,9 @@ export default async function NewProductPage() {
         <p className="text-lg text-gray-600">Completa los detalles del nuevo artículo.</p>
       </header>
       <main>
-        <ProductForm 
-          brands={brands || []} 
-          collections={collections || []} 
+        <ProductForm
+          brands={brands || []}
+          collections={collections || []}
           categories={categories || []}
         />
       </main>
