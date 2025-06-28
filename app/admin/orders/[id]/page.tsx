@@ -1,14 +1,14 @@
 // @/app/admin/orders/[id]/page.tsx
+import { createClient } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import React from 'react';
+import { Receipt } from '@/components/admin/Receipt';
+import { UpdateStatusForm } from '@/components/admin/UpdateStatusForm';
+import { PrintTicketButton } from '@/components/admin/PrintTicketButton';
+import { NotifyCustomerButton } from './NotifyCustomerButton'; // Importamos el botón actualizado
 
-import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import React from "react";
-import { Receipt } from "@/components/admin/Receipt";
-import { UpdateStatusForm } from "@/components/admin/UpdateStatusForm";
-import { PrintTicketButton } from "@/components/admin/PrintTicketButton";
-
-// --- Tipos (sin cambios, pero ahora se usará en los componentes hijos) ---
+// --- Tipos (Sin cambios) ---
 type OrderItem = {
     item_id: string;
     product_name: string;
@@ -35,23 +35,21 @@ type OrderDetails = {
     items: OrderItem[];
 };
 
-// --- Función de obtención de datos (ligeramente ajustada para mayor claridad) ---
+// --- Función getOrderDetails (Sin cambios) ---
 async function getOrderDetails(orderId: string): Promise<OrderDetails | null> {
     const supabase = await createClient();
-
-    // La vista 'full_order_details' devuelve una fila por cada ítem en la orden
     const { data: orderItemsData, error } = await supabase
         .from('full_order_details')
         .select('*')
         .eq('order_id', orderId);
 
     if (error || !orderItemsData || orderItemsData.length === 0) {
-        console.error("Error fetching order details:", error?.message);
+        console.error('Error fetching order details:', error?.message);
         return null;
     }
 
     const orderInfo = orderItemsData[0];
-    let schoolName: string | undefined = undefined;
+    let schoolName: string | undefined;
 
     if (orderInfo.school_id) {
         const { data: schoolData, error: schoolError } = await supabase
@@ -59,11 +57,10 @@ async function getOrderDetails(orderId: string): Promise<OrderDetails | null> {
             .select('name')
             .eq('id', orderInfo.school_id)
             .single();
-        if (schoolError) console.error("Error fetching school name:", schoolError.message);
+        if (schoolError) console.error('Error fetching school name:', schoolError.message);
         schoolName = schoolData?.name;
     }
 
-    // Se construye el objeto final mapeando los ítems
     const orderDetails: OrderDetails = {
         order_id: orderInfo.order_id,
         order_date: orderInfo.order_date,
@@ -91,12 +88,7 @@ async function getOrderDetails(orderId: string): Promise<OrderDetails | null> {
     return orderDetails;
 }
 
-
-// ============================================================================
-// INICIO DE CORRECCIONES Y REFACTORIZACIÓN
-// Se extraen secciones de la página en componentes más pequeños y manejables
-// ============================================================================
-
+// --- Componente OrderHeader (Sin cambios) ---
 const OrderHeader = ({ orderId }: { orderId: string }) => (
     <header className="mb-8 flex justify-between items-center">
         <div>
@@ -112,6 +104,7 @@ const OrderHeader = ({ orderId }: { orderId: string }) => (
     </header>
 );
 
+// --- Componente OrderItemsList (Sin cambios) ---
 const OrderItemsList = ({ items }: { items: OrderItem[] }) => (
     <div className="bg-white rounded-2xl shadow-lg ring-1 ring-gray-900/5">
         <h2 className="text-xl font-semibold text-gray-900 p-6">Ítems del Pedido</h2>
@@ -123,7 +116,6 @@ const OrderItemsList = ({ items }: { items: OrderItem[] }) => (
                         <p className="text-sm text-gray-700 font-medium">SKU: {item.sku} | Talla: {item.size}</p>
                     </div>
                     <div className="text-left sm:text-right flex-shrink-0">
-                        {/* CORRECCIÓN: Se elimina la aserción `as number` redundante */}
                         <p className="font-bold text-gray-900">${item.price_at_sale.toFixed(2)} x {item.quantity}</p>
                         <p className="text-sm text-gray-700 font-medium">Subtotal: ${(item.price_at_sale * item.quantity).toFixed(2)}</p>
                     </div>
@@ -133,6 +125,8 @@ const OrderItemsList = ({ items }: { items: OrderItem[] }) => (
     </div>
 );
 
+// --- Componente OrderSummary (ACTUALIZADO) ---
+// Ahora pasa el orderId al botón de notificación
 const OrderSummary = ({ details }: { details: OrderDetails }) => (
     <div className="bg-white p-6 rounded-2xl shadow-lg ring-1 ring-gray-900/5 space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Resumen</h2>
@@ -152,29 +146,29 @@ const OrderSummary = ({ details }: { details: OrderDetails }) => (
                 <h3 className="text-lg font-semibold text-gray-900">Detalles Adicionales</h3>
                 {details.school_name && (
                     <p className="text-sm">
-                        <span className="font-semibold text-gray-900">Escuela:</span>{" "}
-                        <span className="text-gray-800">{details.school_name}</span>
+                        <span className="font-semibold text-gray-900">Escuela:</span> <span className="text-gray-800">{details.school_name}</span>
                     </p>
                 )}
                 {details.embroidery_notes && (
                     <p className="text-sm">
-                        <span className="font-semibold text-gray-900">Notas:</span>{" "}
-                        <span className="text-gray-800 whitespace-pre-wrap">{details.embroidery_notes}</span>
+                        <span className="font-semibold text-gray-900">Notas:</span> <span className="text-gray-800 whitespace-pre-wrap">{details.embroidery_notes}</span>
                     </p>
                 )}
             </div>
         )}
+        <div className="border-t pt-4">
+            <NotifyCustomerButton 
+               customerName={details.customer_name}
+               customerPhone={details.customer_phone}
+               orderId={details.order_id} // <--- ¡AQUÍ ESTÁ EL CAMBIO!
+            />
+        </div>
     </div>
 );
 
-
-// --- Componente Principal de la Página (Refactorizado para Next.js 15) ---
-export default async function OrderDetailPage({ 
-    params 
-}: { 
-    params: Promise<{ id: string }> 
-}) {
-    // CORRECCIÓN: En Next.js 15, params es una Promise y debe ser awaited
+// --- Componente de Página Principal (CORREGIDO) ---
+export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    // Await params antes de acceder a sus propiedades
     const { id } = await params;
     const orderDetails = await getOrderDetails(id);
 
@@ -186,27 +180,19 @@ export default async function OrderDetailPage({
         <>
             <div className="p-4 md:p-8 print:hidden">
                 <OrderHeader orderId={id} />
-
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Componente para gestionar el estado */}
                         <div className="bg-white p-6 rounded-2xl shadow-lg ring-1 ring-gray-900/5">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4">Gestión de Estado</h2>
                             <UpdateStatusForm orderId={orderDetails.order_id} currentStatus={orderDetails.order_status} />
                         </div>
-
-                        {/* Componente para la lista de ítems */}
                         <OrderItemsList items={orderDetails.items} />
                     </div>
-
                     <div className="lg:col-span-1">
-                        {/* Componente para el resumen de la orden */}
                         <OrderSummary details={orderDetails} />
                     </div>
                 </div>
             </div>
-            
-            {/* Sección para imprimir el ticket */}
             <div className="hidden print:block">
                 <Receipt details={orderDetails} />
             </div>
