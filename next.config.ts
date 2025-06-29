@@ -53,6 +53,13 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      // https://scrubpro.com
+      {
+        protocol: 'https',
+        hostname: 'scrubpro.com',
+        port: '',
+        pathname: '/**',
+      },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
       // {
