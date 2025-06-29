@@ -17,28 +17,39 @@ const nextConfig = {
   images: {
     // Aquí autorizamos los dominios desde los cuales se cargarán las imágenes.
     remotePatterns: [
+      // https://www.winkscrubs.com
       {
         protocol: 'https',
         hostname: 'winkscrubs.com', // Dominio que causa el error.
         port: '',
         pathname: '/**', // Puedes hacerlo más o menos específico.
       },
+      // https://bacomade.com
       {
         protocol: 'https',
         hostname: 'barcomade.com',
         port: '',
         pathname: '/cdn/shop/files/**',
       },
+      
       {
         protocol: 'https',
         hostname: 'placehold.co',
         port: '',
         pathname: '/**',
       },
-      // Si también usas otros servicios de imágenes, agrégalos aquí:
+      // https://via.placeholder.com
       {
         protocol: 'https',
         hostname: 'via.placeholder.com',
+        port: '',
+        pathname: '/**',
+      },
+      
+      // https://images.barcodelookup.com
+      {
+        protocol: 'https',
+        hostname: 'images.barcodelookup.com',
         port: '',
         pathname: '/**',
       },
