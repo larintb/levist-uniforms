@@ -1,10 +1,12 @@
+// Pega este código completo en tu archivo ProductForm.tsx
+
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
 import Image from 'next/image';
 import { createProductAction, updateProductAction } from '@/app/admin/products/actions';
 import { useRouter } from 'next/navigation';
-import toast, { Toaster } from 'react-hot-toast'; // Agregado: Importación de react-hot-toast
+import toast, { Toaster } from 'react-hot-toast';
 
 // --- Tipos ---
 type Brand = { id: string; name: string; };
@@ -53,7 +55,65 @@ export interface ProductFormProps {
   initialData?: InitialProductData;
 }
 
-const SIZES = ["XXS","XS", "S", "M", "L", "XL", "1X", "2XL", "3XL", "4XL", "5XL"];
+// Este arreglo contiene todas las tallas únicas, estandarizadas y ordenadas lógicamente.
+// Este arreglo contiene todas las tallas únicas, estandarizadas y ordenadas lógicamente.
+const SIZES = [
+  "XXS",
+  "2XS PET",
+  "2XS SHR",
+  "2XS TAL",
+  "2XS",
+  "XS PET",
+  "XS SHR",
+  "XS TAL",
+  "XS",
+  "S PET",
+  "S SHR",
+  "S TAL",
+  "S",
+  "S/M",
+  "M PET",
+  "M SHR",
+  "M TAL",
+  "M",
+  "L PET",
+  "L SHR",
+  "L TAL",
+  "L",
+  "L/XL",
+  "XL PET",
+  "XL SHR",
+  "XL TAL",
+  "XL",
+  "1X PET",
+  "1X TAL",
+  "1X",
+  "2X PET",
+  "2X SHR",
+  "2X TAL",
+  "2X",
+  "2XL PET",
+  "2XL SHR",
+  "2XL TAL",
+  "2XL",
+  "3X PET",
+  "3X SHR",
+  "3X TAL",
+  "3X",
+  "3XL PET",
+  "3XL SHR",
+  "3XL TAL",
+  "3XL",
+  "4X",
+  "4XL SHR",
+  "4XL TAL",
+  "4XL",
+  "5X",
+  "5XL SHR",
+  "5XL TAL",
+  "5XL",
+  "OSFA"
+];
 
 // --- Iconos ---
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>;
@@ -64,25 +124,12 @@ const ImageIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmln
 export function ProductForm({ brands, collections, categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  // Removido: const [formMessage, setFormMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
   const [selectedBrand, setSelectedBrand] = useState<string>(initialData?.collection_id ? collections.find(c => c.id === initialData.collection_id)?.brand_id || '' : '');
-
-  const [variants, setVariants] = useState<Variant[]>(
-    initialData?.product_variants.map(v => ({
-      ...v,
-      id: v.id || crypto.randomUUID(),
-      inventory: v.inventory.map(i => ({
-        ...i,
-        id: i.id || crypto.randomUUID(),
-      }))
-    })) || []
-  );
+  const [variants, setVariants] = useState<Variant[]>(initialData?.product_variants || []);
 
   useEffect(() => {
     if (!initialData && variants.length === 0) {
-      setVariants([{ id: crypto.randomUUID(), color: '', image_url: '', inventory: [] }]);
+      setVariants([{ id: `temp-${crypto.randomUUID()}`, color: '', image_url: '', inventory: [] }]);
     }
   }, [initialData, variants.length]);
 
@@ -92,13 +139,31 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
     setVariants(prev => prev.map(v => v.id === variantId ? { ...v, [field]: value } : v));
   };
 
-  const handleAddVariant = () => setVariants([...variants, { id: crypto.randomUUID(), color: '', image_url: null, inventory: [] }]);
+  const handleAddVariant = () => {
+    setVariants([...variants, { id: `temp-${crypto.randomUUID()}`, color: '', image_url: null, inventory: [] }]);
+  };
+  
   const handleRemoveVariant = (id: string) => setVariants(variants.filter(v => v.id !== id));
   
   const handleAddInventoryRow = (vId: string) => {
     setVariants(variants.map(v =>
       v.id === vId
-        ? { ...v, inventory: [...v.inventory, { id: crypto.randomUUID(), size: 'S', stock: 0, price: 0, barcode: null }] }
+        ? { ...v, inventory: [...v.inventory, { id: `temp-${crypto.randomUUID()}`, size: '', stock: 0, price: 0, barcode: null }] }
+        : v
+    ));
+  };
+
+  const handleInventoryChange = (variantId: string, inventoryId: string, field: keyof InventoryRow, value: string | number) => {
+    setVariants(prev => prev.map(v => 
+      v.id === variantId 
+        ? { 
+            ...v, 
+            inventory: v.inventory.map(i => 
+              i.id === inventoryId 
+                ? { ...i, [field]: value } 
+                : i
+            ) 
+          }
         : v
     ));
   };
@@ -113,17 +178,18 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Removido: setFormMessage(null);
     const formData = new FormData(event.currentTarget);
 
     const variantsData = variants.map(variant => ({
+        id: variant.id.startsWith('temp-') ? undefined : variant.id,
         color: variant.color,
         image_url: variant.image_url,
         inventory: variant.inventory.map(inv => ({
-            size: formData.get(`size-${inv.id}`) as string,
-            stock: Number(formData.get(`stock-${inv.id}`)),
-            price: Number(formData.get(`price-${inv.id}`)),
-            barcode: formData.get(`barcode-${inv.id}`) as string | null,
+            id: inv.id.startsWith('temp-') ? undefined : inv.id,
+            size: inv.size,
+            stock: Number(inv.stock),
+            price: Number(inv.price),
+            barcode: inv.barcode,
         }))
     }));
 
@@ -140,10 +206,10 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
       const result = await action(finalFormData);
 
       if (result.success) {
-        toast.success(result.message); // Agregado: Toast de éxito
+        toast.success(result.message);
         setTimeout(() => router.push('/admin/products'), 1500);
       } else {
-        toast.error(`Error: ${result.message}`); // Agregado: Toast de error
+        toast.error(`Error: ${result.message}`);
       }
     });
   };
@@ -153,7 +219,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-12">
-      <Toaster /> {/* Agregado: Componente Toaster */}
+      <Toaster />
       <div className="bg-white p-8 rounded-2xl shadow-lg ring-1 ring-gray-900/5">
         <h2 className="text-base font-semibold leading-7 text-gray-900">Información del Producto</h2>
         <p className="mt-1 text-sm leading-6 text-gray-600">Datos generales que definen el producto base.</p>
@@ -230,21 +296,45 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
                     <div key={inv.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-center">
                       <div className="col-span-12 sm:col-span-3">
                         <label className="sm:hidden text-xs font-medium text-gray-500">Talla</label>
-                        <select name={`size-${inv.id}`} defaultValue={inv.size} className={formInputStyle}>
+                        <select 
+                            value={inv.size} 
+                            onChange={(e) => handleInventoryChange(variant.id, inv.id, 'size', e.target.value)}
+                            className={formInputStyle}
+                        >
                             <option value="">Talla</option>{SIZES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                       <div className="col-span-12 sm:col-span-4">
-                           <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
-                           <input type="text" name={`barcode-${inv.id}`} placeholder="Escanear o escribir código" defaultValue={inv.barcode ?? ''} className={formInputStyle} onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} />
+                            <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
+                            <input 
+                                type="text" 
+                                placeholder="Escanear o escribir código" 
+                                value={inv.barcode ?? ''} 
+                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'barcode', e.target.value)}
+                                className={formInputStyle} 
+                                onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} 
+                            />
                       </div>
                       <div className="col-span-6 sm:col-span-2">
                         <label className="sm:hidden text-xs font-medium text-gray-500">Stock</label>
-                        <input type="number" name={`stock-${inv.id}`} placeholder="0" defaultValue={inv.stock} className={formInputStyle} />
+                        <input 
+                            type="number" 
+                            placeholder="0" 
+                            value={inv.stock} 
+                            onChange={(e) => handleInventoryChange(variant.id, inv.id, 'stock', Number(e.target.value))}
+                            className={formInputStyle} 
+                        />
                       </div>
                       <div className="col-span-6 sm:col-span-2">
                         <label className="sm:hidden text-xs font-medium text-gray-500">Precio</label>
-                        <input type="number" step="0.01" name={`price-${inv.id}`} placeholder="0.00" defaultValue={inv.price} className={formInputStyle} />
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            placeholder="0.00" 
+                            value={inv.price} 
+                            onChange={(e) => handleInventoryChange(variant.id, inv.id, 'price', Number(e.target.value))}
+                            className={formInputStyle} 
+                        />
                       </div>
                       <div className="col-span-12 sm:col-span-1 flex justify-end">
                         <button type="button" onClick={() => handleRemoveInventoryRow(variant.id, inv.id)} className="text-gray-500 p-2 rounded-full hover:bg-gray-100 hover:text-red-600">
@@ -268,7 +358,6 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
       </div>
 
       <div className="mt-6 flex items-center justify-end gap-x-6">
-        {/* Removido: formMessage display */}
         <button type="button" onClick={() => router.back()} disabled={isPending} className="text-sm font-semibold leading-6 text-gray-900">Cancelar</button>
         <button type="submit" disabled={isPending} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-400">
           {isPending ? "Guardando..." : (initialData ? "Actualizar Producto" : "Crear Producto")}

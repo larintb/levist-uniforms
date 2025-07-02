@@ -60,6 +60,48 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      // https://m.media-amazon.com/images/I/31h27jjdyhL._SL500_.jpg
+      {
+        protocol: 'https',
+        hostname: 'm.media-amazon.com',
+        port: '',
+        pathname: '/images/**',
+      },
+      // https://i.ebayimg.com/images/g/P6kAAOSwgDhlkh34/s-l1600.jpg
+      {
+        protocol: 'https',
+        hostname: 'i.ebayimg.com',
+        port: '',
+        pathname: '/images/**',
+      },
+      // https://cidone.cidresources.com/api/resources/5122-BLAC_0.jpg-c13f6259-ea32-48aa-8a63-f0bec8d762bc.jpg
+      {
+        protocol: 'https',
+        hostname: 'cidone.cidresources.com',
+        port: '',
+        pathname: '/api/resources/**',
+      },
+      // https://mcgillsinc.com/cdn/shop/files/5354_BLAC.jpg?v=1747333550&width=1946
+      {
+        protocol: 'https',
+        hostname: 'mcgillsinc.com',
+        port: '',
+        pathname: '/cdn/shop/files/**',
+      },
+      // https://products.mpowerpromo.com/SCRUB/CID5429/325871/cid5429/cid5429_blac.jpg
+      {
+        protocol: 'https',
+        hostname: 'products.mpowerpromo.com',
+        port: '',
+        pathname: '/SCRUB/CID5429/**',
+      },
+      // https://scrub-supply.com/cdn/shop/files/P-WW6122-BLAC-Front2_180x.webp?v=1727542395
+      {
+        protocol: 'https',
+        hostname: 'scrub-supply.com',
+        port: '',
+        pathname: '/cdn/shop/files/**',
+      },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
       // {

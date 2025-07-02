@@ -166,15 +166,43 @@ export function ProductsList() {
     const [sortConfig, setSortConfig] = useState<{ key: keyof ProductWithDetails; direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalProducts, setTotalProducts] = useState(0);
     const [modal, setModal] = useState<{ open: boolean; productId?: string; productName?: string }>({ open: false });
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const { data: rawData, error: fetchError } = await supabase
+            let query = supabase
                 .from('products')
-                .select(`id, name, sku_base, collections ( name, brands ( name ) )`);
+                .select(`
+                    id, 
+                    name, 
+                    sku_base, 
+                    collections ( name, brands ( name ) )
+                `, { count: 'exact' });
+
+            if (searchTerm) {
+                // La búsqueda en tablas anidadas (brands) es más compleja.
+                // Esta implementación busca en `products` y `collections`.
+                // Para una búsqueda profunda en `brands` se podría requerir una función de base de datos (RPC).
+                 query = query.or(`name.ilike.%${searchTerm}%,sku_base.ilike.%${searchTerm}%`);
+            }
+
+            if (sortConfig) {
+                const isAscending = sortConfig.direction === 'ascending';
+                // El ordenamiento por brand_name requiere un manejo especial
+                // que no es soportado directamente de esta forma en Supabase.
+                // Se mantiene el ordenamiento por las otras columnas.
+                if (sortConfig.key !== 'brand_name') {
+                    query = query.order(sortConfig.key, { ascending: isAscending });
+                }
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            query = query.range(startIndex, startIndex + itemsPerPage - 1);
+
+            const { data: rawData, error: fetchError, count } = await query;
 
             if (fetchError) throw fetchError;
             
@@ -192,48 +220,22 @@ export function ProductsList() {
             });
             
             setProducts(transformedProducts);
+            setTotalProducts(count || 0);
         } catch (err) {
             console.error("Error al cargar los productos:", err);
             setError(err instanceof Error ? err.message : 'Error desconocido al cargar los datos');
         } finally {
             setLoading(false);
         }
-    }, [supabase]);
+    }, [supabase, searchTerm, sortConfig, currentPage, itemsPerPage]);
 
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
 
-    const processedProducts = useMemo(() => {
-        let processableItems = [...products];
-
-        if (searchTerm) {
-            processableItems = processableItems.filter(item =>
-                item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.sku_base.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.brand_name?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        if (sortConfig !== null) {
-            processableItems.sort((a, b) => {
-                const aValue = a[sortConfig.key] ?? '';
-                const bValue = b[sortConfig.key] ?? '';
-                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-                return 0;
-            });
-        }
-        
-        return processableItems;
-    }, [products, searchTerm, sortConfig]);
-
-    const paginatedProducts = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return processedProducts.slice(startIndex, startIndex + itemsPerPage);
-    }, [processedProducts, currentPage, itemsPerPage]);
-
-    const totalPages = Math.ceil(processedProducts.length / itemsPerPage);
+    // Se elimina `processedProducts` y `paginatedProducts` porque la lógica ahora está en el servidor.
+    const paginatedProducts = products;
+    const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
     const requestSort = useCallback((key: keyof ProductWithDetails) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -301,7 +303,7 @@ export function ProductsList() {
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Total de Productos" value={loading ? "..." : products.length} color="#3B82F6" />
+                <StatCard title="Total de Productos" value={loading ? "..." : totalProducts} color="#3B82F6" />
                 <StatCard title="Marcas Activas" value={loading ? "..." : activeBrandsCount} color="#10B981" />
             </div>
 
@@ -368,11 +370,11 @@ export function ProductsList() {
                          <div className="flex flex-col sm:flex-row items-center justify-between bg-white px-4 py-3 sm:px-6 border-t border-gray-200 mt-4">
                             <div className='flex items-center gap-4 mb-4 sm:mb-0'>
                                 <p className="text-sm text-gray-700 whitespace-nowrap">
-                                    Mostrando <span className="font-medium">{processedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, processedProducts.length)}</span> de <span className="font-medium">{processedProducts.length}</span> resultados
+                                    Mostrando <span className="font-medium">{totalProducts > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalProducts)}</span> de <span className="font-medium">{totalProducts}</span> resultados
                                 </p>
                                 <div className="flex items-center gap-2">
                                      <label htmlFor="itemsPerPage" className="sr-only">Resultados por página</label>
-                                     <select id="itemsPerPage" name="itemsPerPage" value={itemsPerPage} onChange={handleItemsPerPageChange} className="block rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
+                                     <select id="itemsPerPage" name="itemsPerPage" value={itemsPerPage} onChange={handleItemsPerPageChange} className="block rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm text-gray-600">
                                          <option value={10}>10</option>
                                          <option value={25}>25</option>
                                          <option value={50}>50</option>
