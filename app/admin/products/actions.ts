@@ -82,7 +82,14 @@ export async function updateProductAction(productId: string, formData: FormData)
                 category_id: rawData.category_id,
             })
             .eq('id', productId);
-        if (productUpdateError) throw productUpdateError;
+        // Si hay un error en la actualización, retornamos un fracaso con el mensaje.
+        if (productUpdateError) {
+          console.error("Error al actualizar el producto:", productUpdateError);
+          return {
+            success: false,
+            message: `Error al actualizar el producto: ${productUpdateError.message}`,
+          };
+        }
 
         // 2. Obtener los IDs de las variantes existentes en la BD
         const { data: existingVariants, error: fetchError } = await supabase
@@ -141,8 +148,18 @@ export async function updateProductAction(productId: string, formData: FormData)
                         .upsert(inventoryToUpsert)
                         .select('id');
                         
-                    if (inventoryError) throw inventoryError;
-                    upsertedInventory?.forEach(inv => incomingInventoryIds.add(inv.id));
+                    // Si hay un error, registrarlo y retornar un fracaso.
+                    if (inventoryError) {
+                      console.error("Error al procesar el inventario:", inventoryError);
+                      return {
+                        success: false,
+                        message: `Error al procesar el inventario: ${inventoryError.message}`,
+                      };
+                    }
+                    // Agregar los IDs del inventario actualizado o insertado a la lista de IDs válidos.
+                    if (upsertedInventory) {
+                      upsertedInventory.forEach(inv => incomingInventoryIds.add(inv.id));
+                    }
                 }
 
                 const inventoryIdsToDelete = [...existingInventoryIds].filter(id => !incomingInventoryIds.has(id));
@@ -158,8 +175,15 @@ export async function updateProductAction(productId: string, formData: FormData)
         );
 
         if (variantIdsToDelete.length > 0) {
-            await supabase.from('inventory').delete().in('variant_id', variantIdsToDelete);
-            await supabase.from('product_variants').delete().in('id', variantIdsToDelete);
+            // Si hay un error, registrarlo y retornar un fracaso.
+            const { error: deleteError } = await supabase.from('product_variants').delete().in('id', variantIdsToDelete);
+            if (deleteError) {
+              console.error("Error al eliminar variantes obsoletas:", deleteError);
+              return {
+                success: false,
+                message: `Error al eliminar variantes: ${deleteError.message}`,
+              };
+            }
         }
         
     } catch (error) {
