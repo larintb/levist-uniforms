@@ -1,10 +1,14 @@
+// Pega este código completo en tu archivo actions.ts
+
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { randomUUID } from 'crypto';
 
-// --- Tipos de Datos (sin cambios) ---
+// --- Tipos de Datos ---
 type InventoryData = {
+    id?: string;
     size: string;
     stock: number;
     price: number;
@@ -12,14 +16,14 @@ type InventoryData = {
 };
 
 type VariantData = {
+    id?: string;
     color: string;
     image_url: string | null;
     inventory: InventoryData[];
 };
 
-// --- ACCIÓN PARA CREAR PRODUCTOS (sin cambios) ---
+// --- ACCIÓN PARA CREAR PRODUCTOS ---
 export async function createProductAction(formData: FormData) {
-  // La lógica de creación ya es correcta y no necesita cambios.
   const supabase = await createClient();
   const rawData = {
     name: formData.get('name') as string,
@@ -28,14 +32,17 @@ export async function createProductAction(formData: FormData) {
     category_id: formData.get('category_id') as string,
     variants: JSON.parse(formData.get('variants_json') as string) as VariantData[],
   };
+
   try {
     const { data: productData, error: productError } = await supabase.from('products').insert({ name: rawData.name, sku_base: rawData.sku_base, collection_id: rawData.collection_id, category_id: rawData.category_id }).select('id').single();
     if (productError) throw productError;
     const newProductId = productData.id;
+
     for (const variant of rawData.variants) {
       const { data: variantData, error: variantError } = await supabase.from('product_variants').insert({ product_id: newProductId, color: variant.color, image_url: variant.image_url || null }).select('id').single();
       if (variantError) throw variantError;
       const newVariantId = variantData.id;
+
       if (variant.inventory.length > 0) {
         const inventoryToInsert = variant.inventory.map(inv => ({ variant_id: newVariantId, size: inv.size, stock: inv.stock, price: inv.price, barcode: inv.barcode || null }));
         const { error: inventoryError } = await supabase.from('inventory').insert(inventoryToInsert);
@@ -44,15 +51,15 @@ export async function createProductAction(formData: FormData) {
     }
   } catch (error) {
     console.error("Error creando producto:", error);
+    return { success: false, message: `Error al crear: ${error instanceof Error ? error.message : String(error)}` };
   }
-  revalidatePath('/admin/dashboard');
+
   revalidatePath('/admin/products');
   return { success: true, message: "Producto creado con éxito" };
 }
 
 
-// --- ¡ACCIÓN PARA ACTUALIZAR PRODUCTOS REFACTORIZADA! ---
-// Se reemplaza la lógica "delete-recreate" por "upsert" para no borrar datos históricos.
+// --- ¡ACCIÓN PARA ACTUALIZAR PRODUCTOS CORREGIDA! ---
 export async function updateProductAction(productId: string, formData: FormData) {
     const supabase = await createClient();
     
@@ -65,7 +72,7 @@ export async function updateProductAction(productId: string, formData: FormData)
     };
 
     try {
-        // 1. Actualizar los datos del producto principal. Esto es seguro.
+        // 1. Actualizar los datos del producto principal
         const { error: productUpdateError } = await supabase
             .from('products')
             .update({
@@ -77,67 +84,95 @@ export async function updateProductAction(productId: string, formData: FormData)
             .eq('id', productId);
         if (productUpdateError) throw productUpdateError;
 
-        // 2. Procesar las variantes y el inventario con "upsert".
+        // 2. Obtener los IDs de las variantes existentes en la BD
+        const { data: existingVariants, error: fetchError } = await supabase
+            .from('product_variants')
+            .select('id')
+            .eq('product_id', productId);
+        
+        if (fetchError) throw fetchError;
+        const existingVariantIds = new Set(existingVariants.map(v => v.id));
+
+        // 3. Procesar variantes y su inventario desde el formulario
+        const incomingVariantIds = new Set<string>();
+
         for (const variant of rawData.variants) {
-            // Preparamos el objeto para la variante. La clave única es (product_id, color).
             const variantObject = {
+                id: variant.id,
                 product_id: productId,
                 color: variant.color,
                 image_url: variant.image_url || null,
             };
 
-            // Hacemos upsert en product_variants. Si existe una variante con el mismo
-            // product_id y color, la actualiza. Si no, la crea.
             const { data: upsertedVariant, error: variantError } = await supabase
                 .from('product_variants')
-                .upsert(variantObject, { onConflict: 'product_id, color' })
+                .upsert(variantObject)
                 .select('id')
                 .single();
-            
+
             if (variantError) throw variantError;
             if (!upsertedVariant) throw new Error("No se pudo crear o actualizar la variante.");
             
             const variantId = upsertedVariant.id;
-            
-            // Preparamos los objetos de inventario para esta variante.
-            if (variant.inventory.length > 0) {
-                const inventoryToUpsert = variant.inventory.map(inv => ({
-                    variant_id: variantId,
-                    size: inv.size,
-                    stock: inv.stock,
-                    price: inv.price,
-                    barcode: inv.barcode || null,
-                }));
-                
-                // Hacemos upsert en inventory. La clave única es (variant_id, size).
-                const { error: inventoryError } = await supabase
+            incomingVariantIds.add(variantId);
+
+            // Sincronizar inventario para esta variante
+            if (variant.inventory) {
+                const {data: existingInventory, error: fetchInvError} = await supabase
                     .from('inventory')
-                    .upsert(inventoryToUpsert, { onConflict: 'variant_id, size' });
-                    
-                if (inventoryError) throw inventoryError;
+                    .select('id')
+                    .eq('variant_id', variantId);
+                if(fetchInvError) throw fetchInvError;
+                const existingInventoryIds = new Set(existingInventory.map(i => i.id));
+                const incomingInventoryIds = new Set<string>();
+
+                if (variant.inventory.length > 0) {
+                    const inventoryToUpsert = variant.inventory.map(inv => ({
+                        id: inv.id || randomUUID(), 
+                        variant_id: variantId,
+                        size: inv.size,
+                        stock: inv.stock,
+                        price: inv.price,
+                        barcode: inv.barcode || null,
+                    }));
+    
+                    const { data: upsertedInventory, error: inventoryError } = await supabase
+                        .from('inventory')
+                        .upsert(inventoryToUpsert)
+                        .select('id');
+                        
+                    if (inventoryError) throw inventoryError;
+                    upsertedInventory?.forEach(inv => incomingInventoryIds.add(inv.id));
+                }
+
+                const inventoryIdsToDelete = [...existingInventoryIds].filter(id => !incomingInventoryIds.has(id));
+                if(inventoryIdsToDelete.length > 0){
+                    await supabase.from('inventory').delete().in('id', inventoryIdsToDelete);
+                }
             }
         }
-        
-        // NOTA: Esta lógica no maneja la eliminación de variantes o tallas que el usuario
-        // haya quitado del formulario. Se necesitaría una lógica de comparación más compleja
-        // para manejar esos casos de forma segura, que podemos implementar más adelante.
-        // El objetivo principal (arreglar el error de actualización) está resuelto.
 
+        // 4. Determinar y eliminar variantes huérfanas
+        const variantIdsToDelete = [...existingVariantIds].filter(
+            id => !incomingVariantIds.has(id)
+        );
+
+        if (variantIdsToDelete.length > 0) {
+            await supabase.from('inventory').delete().in('variant_id', variantIdsToDelete);
+            await supabase.from('product_variants').delete().in('id', variantIdsToDelete);
+        }
+        
     } catch (error) {
         console.error("Error actualizando producto:", error);
         return { success: false, message: `Error al actualizar: ${error instanceof Error ? error.message : String(error)}` };
     }
 
-    // Revalidar todas las rutas afectadas para mostrar los datos actualizados.
     revalidatePath('/admin/products');
-    revalidatePath('/admin/dashboard');
     revalidatePath(`/admin/products/${productId}/edit`);
-
     return { success: true, message: "Producto actualizado con éxito" };
 }
 
-
-// --- ACCIÓN PARA ELIMINAR PRODUCTOS (sin cambios) ---
+// --- ACCIÓN PARA ELIMINAR PRODUCTOS ---
 export async function deleteProductAction(productId: string) {
     const supabase = await createClient();
 
@@ -147,12 +182,9 @@ export async function deleteProductAction(productId: string) {
         .eq('id', productId);
 
     if (error) {
-        // Este error también podría ocurrir si el producto tiene órdenes.
         return { success: false, message: `Error al eliminar el producto: ${error.message}` };
     }
 
     revalidatePath('/admin/products');
-    revalidatePath('/admin/dashboard');
-
     return { success: true, message: "Producto eliminado con éxito." };
 }
