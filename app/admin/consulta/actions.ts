@@ -69,6 +69,31 @@ type SearchResult = {
     message?: string;
 }
 
+// --- Nueva acción para entrada de inventario ---
+export async function addInventoryEntryAction(inventoryIds: string[]): Promise<{ success: boolean; message: string }> {
+    if (!inventoryIds || inventoryIds.length === 0) {
+        return { success: false, message: "La lista de productos no puede estar vacía." };
+    }
+
+    const supabase = await createClient();
+
+    try {
+        const { error } = await supabase.rpc('increment_inventory_stock', { p_inventory_ids: inventoryIds });
+
+        if (error) {
+            console.error("Error calling RPC increment_inventory_stock:", error);
+            throw new Error("No se pudo actualizar el stock en la base de datos.");
+        }
+
+        return { success: true, message: `Se actualizó el stock para ${inventoryIds.length} productos.` };
+
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Error desconocido al guardar la entrada.";
+        console.error('Error en addInventoryEntryAction:', message);
+        return { success: false, message: "Error al conectar con la base de datos para guardar la entrada." };
+    }
+}
+
 function isUUID(term: string): boolean {
     const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     return uuidRegex.test(term);

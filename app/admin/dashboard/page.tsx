@@ -68,75 +68,89 @@ export default function AdminDashboardPage() {
     const [sortConfig, setSortConfig] = useState<{ key: keyof InventoryItem; direction: 'ascending' | 'descending' } | null>({ key: 'product_name', direction: 'ascending' });
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10); // Por defecto 10 items por página
+    const [totalItems, setTotalItems] = useState(0);
+
+    // --- NUEVO: Estados para las estadísticas ---
+    const [stats, setStats] = useState({
+        totalSkus: 0,
+        lowStock: 0,
+        outOfStock: 0,
+        activeBrands: 0,
+    });
+    const [loadingStats, setLoadingStats] = useState(true);
 
     const fetchInventory = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
-            // La consulta inicial a Supabase ya no necesita el .order() aquí, lo manejaremos en el cliente
-            const { data, error: fetchError } = await supabase.from('full_inventory_details').select('*');
+            
+            let query = supabase.from('full_inventory_details').select('*', { count: 'exact' });
+
+            if (searchTerm) {
+                query = query.or(`product_name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%`);
+            }
+
+            if (sortConfig) {
+                query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'ascending' });
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            query = query.range(startIndex, startIndex + itemsPerPage - 1);
+
+            const { data, error: fetchError, count } = await query;
             
             if (fetchError) {
                 throw fetchError;
             }
             
             setInventory(data || []);
+            setTotalItems(count || 0);
         } catch (err) {
             console.error("Error al cargar los datos del dashboard:", err);
             setError(err instanceof Error ? err.message : 'Error desconocido al cargar los datos');
         } finally {
             setLoading(false);
         }
+    }, [supabase, searchTerm, sortConfig, currentPage, itemsPerPage]);
+
+    const fetchStats = useCallback(async () => {
+        try {
+            setLoadingStats(true);
+            const { count: totalSkus } = await supabase.from('inventory').select('id', { count: 'exact', head: true });
+            const { count: lowStock } = await supabase.from('inventory').select('id', { count: 'exact', head: true }).gt('stock', 0).lt('stock', 5);
+            const { count: outOfStock } = await supabase.from('inventory').select('id', { count: 'exact', head: true }).eq('stock', 0);
+            const { data: brandsData, error: brandsError } = await supabase.from('brands').select('id');
+            if(brandsError) throw brandsError;
+
+            setStats({
+                totalSkus: totalSkus || 0,
+                lowStock: lowStock || 0,
+                outOfStock: outOfStock || 0,
+                activeBrands: brandsData?.length || 0,
+            });
+
+        } catch (err) {
+            console.error("Error al cargar las estadísticas:", err);
+            // Opcional: manejar el error de estadísticas en la UI
+        } finally {
+            setLoadingStats(false);
+        }
     }, [supabase]);
+
 
     useEffect(() => {
         fetchInventory();
     }, [fetchInventory]);
 
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
+
+
     // --- Lógica de Procesamiento de Datos (Filtrar, Ordenar, Paginar) ---
-    const processedInventory = useMemo(() => {
-        let processableItems = [...inventory];
-
-        // 1. Filtrado
-        if (searchTerm) {
-            processableItems = processableItems.filter(item =>
-                item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.brand.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        // 2. Ordenamiento
-        if (sortConfig !== null) {
-            processableItems.sort((a, b) => {
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-
-                // Handle null or undefined values
-                if (aValue == null && bValue == null) return 0;
-                if (aValue == null) return sortConfig.direction === 'ascending' ? 1 : -1;
-                if (bValue == null) return sortConfig.direction === 'ascending' ? -1 : 1;
-
-                if (aValue < bValue) {
-                    return sortConfig.direction === 'ascending' ? -1 : 1;
-                }
-                if (aValue > bValue) {
-                    return sortConfig.direction === 'ascending' ? 1 : -1;
-                }
-                return 0;
-            });
-        }
-        
-        return processableItems;
-    }, [inventory, searchTerm, sortConfig]);
-
-    // 3. Paginación (se aplica sobre los datos ya filtrados y ordenados)
-    const paginatedInventory = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return processedInventory.slice(startIndex, startIndex + itemsPerPage);
-    }, [processedInventory, currentPage, itemsPerPage]);
-
-    const totalPages = Math.ceil(processedInventory.length / itemsPerPage);
+    // Se elimina `processedInventory` y `paginatedInventory` porque la lógica ahora está en el servidor.
+    const paginatedInventory = inventory;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     // --- NUEVO: Función para manejar el clic en los encabezados de la tabla ---
     const requestSort = useCallback((key: keyof InventoryItem) => {
@@ -194,10 +208,10 @@ export default function AdminDashboardPage() {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Total de SKUs" value={inventory.length} color="#3B82F6" />
-                <StatCard title="Stock Bajo (<5)" value={lowStockCount} color="#F59E0B" />
-                <StatCard title="Agotados" value={outOfStockCount} color="#EF4444" />
-                <StatCard title="Marcas Activas" value={activeBrandsCount} color="#10B981" />
+                <StatCard title="Total de SKUs" value={loadingStats ? "..." : stats.totalSkus} color="#3B82F6" />
+                <StatCard title="Stock Bajo (<5)" value={loadingStats ? "..." : stats.lowStock} color="#F59E0B" />
+                <StatCard title="Agotados" value={loadingStats ? "..." : stats.outOfStock} color="#EF4444" />
+                <StatCard title="Marcas Activas" value={loadingStats ? "..." : stats.activeBrands} color="#10B981" />
             </div>
 
             <main className="bg-white p-6 md:p-8 rounded-lg shadow-md">
@@ -250,7 +264,7 @@ export default function AdminDashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {/* --- Usamos los datos paginados en lugar de los filtrados --- */}
+                                    {/* --- Usamos los datos paginados in lugar de los filtrados --- */}
                                     {paginatedInventory.map((item) => (
                                         <tr key={item.inventory_id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -335,7 +349,7 @@ export default function AdminDashboardPage() {
                                 <div className="flex items-center space-x-4">
                                     <div className="flex items-center space-x-2">
                                         <p className="text-sm text-gray-700 font-medium">
-                                            Mostrando <span className="font-semibold text-gray-900">{Math.min(1 + (currentPage - 1) * itemsPerPage, processedInventory.length)}</span> - <span className="font-semibold text-gray-900">{Math.min(currentPage * itemsPerPage, processedInventory.length)}</span> de <span className="font-semibold text-gray-900">{processedInventory.length}</span> resultados
+                                            Mostrando <span className="font-semibold text-gray-900">{Math.min(1 + (currentPage - 1) * itemsPerPage, totalItems)}</span> - <span className="font-semibold text-gray-900">{Math.min(currentPage * itemsPerPage, totalItems)}</span> de <span className="font-semibold text-gray-900">{totalItems}</span> resultados
                                         </p>
                                     </div>
                                     <div className="flex items-center space-x-2">
