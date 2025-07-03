@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { searchAction } from '@/app/admin/consulta/actions';
+import { searchAction, addInventoryEntryAction } from '@/app/admin/consulta/actions';
 import Image from 'next/image';
 
 // --- Tipos de Datos ---
@@ -50,6 +50,9 @@ type SearchResultData = {
     type: 'product' | 'order';
     data: ProductDetails | OrderDetails;
 };
+
+// --- Nuevo tipo para el modo de la página ---
+type PageMode = 'consulta' | 'entrada';
 
 // --- Icono de Editar ---
 const EditIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -192,17 +195,14 @@ function OrderCard({ order }: { order: OrderDetails }) {
                     <ul role="list" className="mt-4 border-t border-b border-gray-200 divide-y divide-gray-200">
                         {order.items.map((item) => (
                             <li key={item.item_id} className="flex py-4">
-                                <div className="flex-1">
-                                    <p className="font-semibold text-gray-800">{item.product_name}</p>
-                                    <p className="text-sm text-gray-500">
-                                        {item.size} - {item.color} (SKU: {item.sku})
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{item.product_name}</p>
+                                    <p className="text-sm text-gray-500 truncate">
+                                        {item.sku} - {item.color} / {item.size}
                                     </p>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-semibold text-gray-800">
-                                        ${parseFloat(item.price_at_sale).toFixed(2)}
-                                    </p>
-                                    <p className="text-sm text-gray-500">Cant: {item.quantity}</p>
+                                <div className="inline-flex items-center text-base font-semibold text-gray-900">
+                                    {item.quantity} x ${parseFloat(item.price_at_sale).toFixed(2)}
                                 </div>
                             </li>
                         ))}
@@ -242,9 +242,16 @@ export default function ConsultaPage() {
     const [wasSearched, setWasSearched] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // --- Nuevos estados para el modo de entrada de inventario ---
+    const [mode, setMode] = useState<PageMode>('consulta');
+    const [scannedProducts, setScannedProducts] = useState<ProductDetails[]>([]);
+    const [entrySuccess, setEntrySuccess] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+
     useEffect(() => {
         inputRef.current?.focus();
-    }, []);
+    }, [mode]); // Re-enfocar al cambiar de modo
 
     const handleSearch = (formData: FormData) => {
         const term = formData.get('barcode') as string;
@@ -256,27 +263,91 @@ export default function ConsultaPage() {
         }
 
         setError(null);
+        setEntrySuccess(null);
         setSearchResult(null);
         setWasSearched(true);
 
         startTransition(async () => {
             const result = await searchAction(term.trim());
-            if (result.success && result.data && result.type) {
-                setSearchResult({ type: result.type, data: result.data });
-            } else {
-                setError(result.message || "No se encontró un resultado.");
+
+            if (mode === 'consulta') {
+                if (result.success && result.data && result.type) {
+                    setSearchResult({ type: result.type, data: result.data });
+                } else {
+                    setError(result.message || "No se encontró un resultado.");
+                }
+            } else { // modo 'entrada'
+                if (result.success && result.type === 'product' && result.data) {
+                    const product = result.data as ProductDetails;
+                    if (scannedProducts.length < 20) {
+                        setScannedProducts(prev => [product, ...prev]);
+                    } else {
+                        setError("Se ha alcanzado el límite de 20 productos por entrada.");
+                    }
+                } else {
+                    setError(result.message || "Producto no encontrado o código no válido.");
+                }
             }
         });
+        // Limpiar el input después de cada escaneo
+        if (inputRef.current) {
+            inputRef.current.value = "";
+        }
+    };
+
+    const handleSaveEntry = () => {
+        if (scannedProducts.length === 0) {
+            setError("No hay productos en la lista para guardar.");
+            return;
+        }
+        setError(null);
+        setEntrySuccess(null);
+        setIsSubmitting(true);
+
+        startTransition(async () => {
+            const inventoryIds = scannedProducts.map(p => p.inventory_id);
+            const result = await addInventoryEntryAction(inventoryIds);
+
+            if (result.success) {
+                setEntrySuccess(result.message || "Entrada de inventario guardada con éxito.");
+                setScannedProducts([]); // Limpiar lista
+            } else {
+                setError(result.message || "Error al guardar la entrada de inventario.");
+            }
+            setIsSubmitting(false);
+        });
+    };
+
+    const handleRemoveProduct = (inventoryId: string) => {
+        setScannedProducts(prev => prev.filter(p => p.inventory_id !== inventoryId));
     };
     
     return (
         <div className="p-4 md:p-8 w-full max-w-4xl mx-auto">
             <header className="text-center mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Centro de Consultas</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Centro de Operaciones</h1>
                 <p className="text-gray-600 mt-2">
-                    Escanea un código de barras de producto o un código QR de orden.
+                    {mode === 'consulta'
+                        ? "Escanea un código de barras de producto o un código QR de orden para ver detalles."
+                        : "Escanea productos para registrarlos en el inventario."}
                 </p>
             </header>
+
+            {/* Selector de Modo */}
+            <div className="mb-6 flex justify-center bg-gray-200 rounded-lg p-1">
+                <button
+                    onClick={() => setMode('consulta')}
+                    className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'consulta' ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}
+                >
+                    Modo Consulta
+                </button>
+                <button
+                    onClick={() => setMode('entrada')}
+                    className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'entrada' ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}
+                >
+                    Entrada de Inventario
+                </button>
+            </div>
 
             <main>
                 <form action={handleSearch} className="relative flex items-center">
@@ -288,8 +359,9 @@ export default function ConsultaPage() {
                         type="text"
                         name="barcode"
                         id="barcode-input"
-                        placeholder="Escanear código de producto u orden..."
+                        placeholder={mode === 'consulta' ? "Escanear código de producto u orden..." : "Escanear producto para agregar..."}
                         className="w-full pl-12 pr-32 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600"
+                        autoComplete="off"
                     />
                     <button
                         type="submit"
@@ -307,7 +379,7 @@ export default function ConsultaPage() {
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <span className="text-gray-600">Buscando en el inventario...</span>
+                            <span className="text-gray-600">Buscando...</span>
                         </div>
                     )}
                     {error && (
@@ -316,7 +388,15 @@ export default function ConsultaPage() {
                             <p>{error}</p>
                         </div>
                     )}
-                    {!isPending && !error && searchResult && (
+                    {entrySuccess && (
+                        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg" role="alert">
+                            <p className="font-bold">Éxito</p>
+                            <p>{entrySuccess}</p>
+                        </div>
+                    )}
+
+                    {/* --- VISTA DE CONSULTA --- */}
+                    {mode === 'consulta' && !isPending && !error && searchResult && (
                         <>
                             {searchResult.type === 'product' && (
                                 <ProductCard product={searchResult.data as ProductDetails} />
@@ -326,13 +406,62 @@ export default function ConsultaPage() {
                             )}
                         </>
                     )}
-
-                    {!isPending && !error && !searchResult && wasSearched && (
+                    {mode === 'consulta' && !isPending && !error && !searchResult && wasSearched && (
                         <div className="bg-white p-8 rounded-xl shadow-md text-center">
                             <h3 className="text-xl font-bold text-gray-800">No se encontraron resultados</h3>
                             <p className="text-gray-500 mt-2">
                                 El código no corresponde a ningún producto u orden. Por favor, verifíquelo e intente de nuevo.
                             </p>
+                        </div>
+                    )}
+
+                    {/* --- VISTA DE ENTRADA DE INVENTARIO --- */}
+                    {mode === 'entrada' && (
+                        <div className="mt-8">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold text-gray-800">Productos Escaneados ({scannedProducts.length}/20)</h2>
+                                <button
+                                    onClick={handleSaveEntry}
+                                    disabled={isSubmitting || scannedProducts.length === 0}
+                                    className="bg-green-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:bg-green-400 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? 'Guardando...' : 'Guardar Entrada'}
+                                </button>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-md">
+                                <ul className="divide-y divide-gray-200">
+                                    {scannedProducts.length > 0 ? (
+                                        scannedProducts.map((p, index) => (
+                                            <li key={`${p.inventory_id}-${index}`} className="p-4 flex items-center justify-between">
+                                                <div className="flex items-center">
+                                                    <Image
+                                                        src={p.image_url || 'https://placehold.co/100x100/f8f9fa/e9ecef?text=Sin+Imagen'}
+                                                        alt={p.product_name}
+                                                        width={50}
+                                                        height={50}
+                                                        className="rounded-md mr-4"
+                                                    />
+                                                    <div>
+                                                        <p className="font-semibold text-gray-800">{p.product_name}</p>
+                                                        <p className="text-sm text-gray-500">{p.sku} - {p.color} / {p.size}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemoveProduct(p.inventory_id)}
+                                                    className="text-red-500 hover:text-red-700 font-semibold"
+                                                    title="Quitar de la lista"
+                                                >
+                                                    Quitar
+                                                </button>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="p-8 text-center text-gray-500">
+                                            Aún no se han escaneado productos.
+                                        </li>
+                                    )}
+                                </ul>
+                            </div>
                         </div>
                     )}
                 </div>
