@@ -296,25 +296,6 @@ export default function ConsultaPage() {
         }
     };
 
-    const handlePriceChange = async (inventoryId: string, newPrice: number) => {
-        const originalProducts = [...scannedProducts];
-        
-        // Optimistic UI update
-        setScannedProducts(prev => 
-            prev.map(p => p.inventory_id === inventoryId ? { ...p, price: String(newPrice) } : p)
-        );
-
-        const result = await updateInventoryItemPrice(inventoryId, newPrice);
-
-        if (result.success) {
-            toast.success('Precio actualizado');
-        } else {
-            toast.error(`Error: ${result.message}`);
-            // Revert on failure
-            setScannedProducts(originalProducts);
-        }
-    };
-
     const handleSaveEntry = () => {
         if (scannedProducts.length === 0) {
             setError("No hay productos en la lista para guardar.");
