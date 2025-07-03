@@ -119,6 +119,7 @@ const SIZES = [
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>;
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" /></svg>;
 const ImageIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>;
+const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>;
 
 
 export function ProductForm({ brands, collections, categories, initialData }: ProductFormProps) {
@@ -126,10 +127,13 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
   const [isPending, startTransition] = useTransition();
   const [selectedBrand, setSelectedBrand] = useState<string>(initialData?.collection_id ? collections.find(c => c.id === initialData.collection_id)?.brand_id || '' : '');
   const [variants, setVariants] = useState<Variant[]>(initialData?.product_variants || []);
+  const [openVariantId, setOpenVariantId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialData && variants.length === 0) {
-      setVariants([{ id: `temp-${crypto.randomUUID()}`, color: '', image_url: '', inventory: [] }]);
+      const newVariantId = `temp-${crypto.randomUUID()}`;
+      setVariants([{ id: newVariantId, color: '', image_url: '', inventory: [] }]);
+      setOpenVariantId(newVariantId);
     }
   }, [initialData, variants.length]);
 
@@ -140,7 +144,9 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
   };
 
   const handleAddVariant = () => {
-    setVariants([...variants, { id: `temp-${crypto.randomUUID()}`, color: '', image_url: null, inventory: [] }]);
+    const newVariantId = `temp-${crypto.randomUUID()}`;
+    setVariants([...variants, { id: newVariantId, color: '', image_url: null, inventory: [] }]);
+    setOpenVariantId(newVariantId);
   };
   
   const handleRemoveVariant = (id: string) => setVariants(variants.filter(v => v.id !== id));
@@ -249,106 +255,136 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
 
       <div className="bg-white p-8 rounded-2xl shadow-lg ring-1 ring-gray-900/5">
         <h2 className="text-base font-semibold leading-7 text-gray-900">Variantes e Inventario</h2>
-        <div className="space-y-8 mt-10">
+        <div className="space-y-4 mt-10">
           {variants.map((variant, vIndex) => (
-            <div key={variant.id} className="bg-white p-6 rounded-xl border border-gray-200/80">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-semibold text-gray-800">Variante de Color #{vIndex + 1}</h3>
-                {variants.length > 1 && <button type="button" onClick={() => handleRemoveVariant(variant.id)} className="text-red-600 hover:text-red-800 text-sm font-medium inline-flex items-center gap-1"> <TrashIcon className="h-4 w-4"/> Eliminar</button>}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
-                <div className="lg:col-span-1">
-                    <label className={`${formLabelStyle} mb-2`}>Vista Previa</label>
-                    <div className="mt-2 flex justify-center items-center h-40 w-full rounded-lg border border-dashed border-gray-900/25 bg-gray-50 p-2">
-                        {variant.image_url ? ( 
-                          <Image 
-                          src={variant.image_url} 
-                          alt={`Vista previa de ${variant.color}`} 
-                          width={150} 
-                          height={150} 
-                          className="h-full w-full object-contain rounded-md" 
-                          onError={(e) => { const target = e.currentTarget as HTMLImageElement; target.src = 'https://placehold.co/150x150/f8f9fa/e9ecef?text=Error'; }} /> ) : ( <div className="text-center"> <ImageIcon className="mx-auto h-12 w-12 text-gray-300" /> <p className="mt-2 text-xs leading-5 text-gray-600">Sin imagen</p> </div> )}
+            <div key={variant.id} className="bg-white rounded-xl border border-gray-200/80 overflow-hidden">
+              <div 
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                onClick={() => setOpenVariantId(openVariantId === variant.id ? null : variant.id)}
+              >
+                <div className="flex items-center gap-3">
+                  {variant.image_url ? (
+                    <Image src={variant.image_url} alt={variant.color} width={40} height={40} className="h-10 w-10 rounded-md object-cover bg-gray-100" onError={(e) => { const target = e.currentTarget as HTMLImageElement; target.src = 'https://placehold.co/40x40/f8f9fa/e9ecef?text=?'; }}/>
+                  ) : (
+                    <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center">
+                      <ImageIcon className="h-6 w-6 text-gray-300" />
                     </div>
+                  )}
+                  <h3 className="font-semibold text-gray-800">
+                    {variant.color || `Variante de Color #${vIndex + 1}`}
+                  </h3>
                 </div>
-                <div className="lg:col-span-2 space-y-6">
-                    <div>
-                        <label htmlFor={`color-${variant.id}`} className={formLabelStyle}>Color</label>
-                        <div className="mt-2"><input type="text" id={`color-${variant.id}`} value={variant.color} onChange={(e) => handleVariantFieldChange(variant.id, 'color', e.target.value)} required placeholder="Ej: Royal Blue" className={formInputStyle}/></div>
-                    </div>
-                    <div>
-                        <label htmlFor={`image_url-${variant.id}`} className={formLabelStyle}>URL de la Imagen</label>
-                        <div className="mt-2"><input type="url" id={`image_url-${variant.id}`} value={variant.image_url ?? ''} onChange={(e) => handleVariantFieldChange(variant.id, 'image_url', e.target.value)} placeholder="https://..." className={formInputStyle}/></div>
-                    </div>
+                <div className="flex items-center gap-4">
+                  {variants.length > 1 && 
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); handleRemoveVariant(variant.id); }} 
+                      className="text-red-600 hover:text-red-800 text-sm font-medium inline-flex items-center gap-1 z-10"
+                    > 
+                      <TrashIcon className="h-4 w-4"/> 
+                      <span className="hidden sm:inline">Eliminar</span>
+                    </button>
+                  }
+                  <ChevronDownIcon className={`h-6 w-6 text-gray-500 transition-transform ${openVariantId === variant.id ? 'rotate-180' : ''}`} />
                 </div>
               </div>
 
-              <div className="mt-8">
-                <h4 className="text-sm font-medium text-gray-800 mb-4">Inventario de esta Variante</h4>
-                <div className="grid grid-cols-12 gap-x-4 mb-2 px-2 text-xs font-medium text-gray-500 max-sm:hidden">
-                  <div className="col-span-3">Talla</div>
-                  <div className="col-span-4">Código de Barras</div>
-                  <div className="col-span-2">Stock</div>
-                  <div className="col-span-2">Precio ($)</div>
-                  <div className="col-span-1"></div>
-                </div>
-                <div className="space-y-4">
-                  {variant.inventory.map(inv => (
-                    <div key={inv.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-center">
-                      <div className="col-span-12 sm:col-span-3">
-                        <label className="sm:hidden text-xs font-medium text-gray-500">Talla</label>
-                        <select 
-                            value={inv.size} 
-                            onChange={(e) => handleInventoryChange(variant.id, inv.id, 'size', e.target.value)}
-                            className={formInputStyle}
-                        >
-                            <option value="">Talla</option>{SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="col-span-12 sm:col-span-4">
-                            <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
+              {openVariantId === variant.id && (
+                <div className="p-6 pt-2">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
+                    <div className="lg:col-span-1">
+                        <label className={`${formLabelStyle} mb-2`}>Vista Previa</label>
+                        <div className="mt-2 flex justify-center items-center h-40 w-full rounded-lg border border-dashed border-gray-900/25 bg-gray-50 p-2">
+                            {variant.image_url ? ( 
+                              <Image 
+                              src={variant.image_url} 
+                              alt={`Vista previa de ${variant.color}`} 
+                              width={150} 
+                              height={150} 
+                              className="h-full w-full object-contain rounded-md" 
+                              onError={(e) => { const target = e.currentTarget as HTMLImageElement; target.src = 'https://placehold.co/150x150/f8f9fa/e9ecef?text=Error'; }} /> ) : ( <div className="text-center"> <ImageIcon className="mx-auto h-12 w-12 text-gray-300" /> <p className="mt-2 text-xs leading-5 text-gray-600">Sin imagen</p> </div> )}
+                        </div>
+                    </div>
+                    <div className="lg:col-span-2 space-y-6">
+                        <div>
+                            <label htmlFor={`color-${variant.id}`} className={formLabelStyle}>Color</label>
+                            <div className="mt-2"><input type="text" id={`color-${variant.id}`} value={variant.color} onChange={(e) => handleVariantFieldChange(variant.id, 'color', e.target.value)} required placeholder="Ej: Royal Blue" className={formInputStyle}/></div>
+                        </div>
+                        <div>
+                            <label htmlFor={`image_url-${variant.id}`} className={formLabelStyle}>URL de la Imagen</label>
+                            <div className="mt-2"><input type="url" id={`image_url-${variant.id}`} value={variant.image_url ?? ''} onChange={(e) => handleVariantFieldChange(variant.id, 'image_url', e.target.value)} placeholder="https://..." className={formInputStyle}/></div>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <h4 className="text-sm font-medium text-gray-800 mb-4">Inventario de esta Variante</h4>
+                    <div className="grid grid-cols-12 gap-x-4 mb-2 px-2 text-xs font-medium text-gray-500 max-sm:hidden">
+                      <div className="col-span-3">Talla</div>
+                      <div className="col-span-4">Código de Barras</div>
+                      <div className="col-span-2">Stock</div>
+                      <div className="col-span-2">Precio ($)</div>
+                      <div className="col-span-1"></div>
+                    </div>
+                    <div className="space-y-4">
+                      {variant.inventory.map(inv => (
+                        <div key={inv.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-center">
+                          <div className="col-span-12 sm:col-span-3">
+                            <label className="sm:hidden text-xs font-medium text-gray-500">Talla</label>
+                            <select 
+                                value={inv.size} 
+                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'size', e.target.value)}
+                                className={formInputStyle}
+                            >
+                                <option value="">Talla</option>{SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <div className="col-span-12 sm:col-span-4">
+                                <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Escanear o escribir código" 
+                                    value={inv.barcode ?? ''} 
+                                    onChange={(e) => handleInventoryChange(variant.id, inv.id, 'barcode', e.target.value)}
+                                    className={formInputStyle} 
+                                    onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} 
+                                />
+                          </div>
+                          <div className="col-span-6 sm:col-span-2">
+                            <label className="sm:hidden text-xs font-medium text-gray-500">Stock</label>
                             <input 
-                                type="text" 
-                                placeholder="Escanear o escribir código" 
-                                value={inv.barcode ?? ''} 
-                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'barcode', e.target.value)}
+                                type="number" 
+                                placeholder="0" 
+                                value={inv.stock} 
+                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'stock', Number(e.target.value))}
                                 className={formInputStyle} 
-                                onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} 
                             />
-                      </div>
-                      <div className="col-span-6 sm:col-span-2">
-                        <label className="sm:hidden text-xs font-medium text-gray-500">Stock</label>
-                        <input 
-                            type="number" 
-                            placeholder="0" 
-                            value={inv.stock} 
-                            onChange={(e) => handleInventoryChange(variant.id, inv.id, 'stock', Number(e.target.value))}
-                            className={formInputStyle} 
-                        />
-                      </div>
-                      <div className="col-span-6 sm:col-span-2">
-                        <label className="sm:hidden text-xs font-medium text-gray-500">Precio</label>
-                        <input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="0.00" 
-                            value={inv.price} 
-                            onChange={(e) => handleInventoryChange(variant.id, inv.id, 'price', Number(e.target.value))}
-                            className={formInputStyle} 
-                        />
-                      </div>
-                      <div className="col-span-12 sm:col-span-1 flex justify-end">
-                        <button type="button" onClick={() => handleRemoveInventoryRow(variant.id, inv.id)} className="text-gray-500 p-2 rounded-full hover:bg-gray-100 hover:text-red-600">
-                          <TrashIcon className="h-5 w-5"/>
-                        </button>
-                      </div>
+                          </div>
+                          <div className="col-span-6 sm:col-span-2">
+                            <label className="sm:hidden text-xs font-medium text-gray-500">Precio</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                placeholder="0.00" 
+                                value={inv.price} 
+                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'price', Number(e.target.value))}
+                                className={formInputStyle} 
+                            />
+                          </div>
+                          <div className="col-span-12 sm:col-span-1 flex justify-end">
+                            <button type="button" onClick={() => handleRemoveInventoryRow(variant.id, inv.id)} className="text-gray-500 p-2 rounded-full hover:bg-gray-100 hover:text-red-600">
+                              <TrashIcon className="h-5 w-5"/>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                    <button type="button" onClick={() => handleAddInventoryRow(variant.id)} className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                      <PlusIcon className="h-5 w-5"/>Añadir Talla
+                    </button>
+                  </div>
                 </div>
-                <button type="button" onClick={() => handleAddInventoryRow(variant.id)} className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                  <PlusIcon className="h-5 w-5"/>Añadir Talla
-                </button>
-              </div>
-
+              )}
             </div>
           ))}
         </div>
