@@ -2,8 +2,9 @@
 
 import React, { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { searchAction, addInventoryEntryAction } from '@/app/admin/consulta/actions';
+import { searchAction, addInventoryEntryAction, updateInventoryItemPrice } from '@/app/admin/consulta/actions';
 import Image from 'next/image';
+import toast, { Toaster } from 'react-hot-toast';
 
 // --- Tipos de Datos ---
 type ProductDetails = {
@@ -305,16 +306,41 @@ export default function ConsultaPage() {
         setIsSubmitting(true);
 
         startTransition(async () => {
-            const inventoryIds = scannedProducts.map(p => p.inventory_id);
-            const result = await addInventoryEntryAction(inventoryIds);
+            // 1. Actualizar todos los precios primero
+            const priceUpdatePromises = scannedProducts.map(p => 
+                updateInventoryItemPrice(p.inventory_id, parseFloat(p.price))
+            );
 
-            if (result.success) {
-                setEntrySuccess(result.message || "Entrada de inventario guardada con éxito.");
-                setScannedProducts([]); // Limpiar lista
-            } else {
-                setError(result.message || "Error al guardar la entrada de inventario.");
+            try {
+                const results = await Promise.all(priceUpdatePromises);
+                const failedUpdate = results.find(res => !res.success);
+
+                if (failedUpdate) {
+                    toast.error(`Error al actualizar precio: ${failedUpdate.message}`);
+                    setError("No se pudo actualizar el precio de uno o más productos. La entrada no fue guardada.");
+                    setIsSubmitting(false);
+                    return;
+                }
+                
+                toast.success('Todos los precios se actualizaron correctamente.');
+
+                // 2. Si todos los precios se actualizan, guardar la entrada de inventario
+                const inventoryIds = scannedProducts.map(p => p.inventory_id);
+                const result = await addInventoryEntryAction(inventoryIds);
+
+                if (result.success) {
+                    setEntrySuccess(result.message || "Entrada de inventario guardada con éxito.");
+                    setScannedProducts([]); // Limpiar lista
+                } else {
+                    setError(result.message || "Error al guardar la entrada de inventario.");
+                }
+            } catch (e) {
+                const error = e as Error;
+                setError(`Ocurrió un error inesperado: ${error.message}`);
+                toast.error('Ocurrió un error inesperado al guardar los datos.');
+            } finally {
+                setIsSubmitting(false);
             }
-            setIsSubmitting(false);
         });
     };
 
@@ -324,6 +350,7 @@ export default function ConsultaPage() {
     
     return (
         <div className="p-4 md:p-8 w-full max-w-4xl mx-auto">
+            <Toaster position="bottom-center" />
             <header className="text-center mb-8">
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Centro de Operaciones</h1>
                 <p className="text-gray-600 mt-2">
@@ -432,8 +459,8 @@ export default function ConsultaPage() {
                                 <ul className="divide-y divide-gray-200">
                                     {scannedProducts.length > 0 ? (
                                         scannedProducts.map((p, index) => (
-                                            <li key={`${p.inventory_id}-${index}`} className="p-4 flex items-center justify-between">
-                                                <div className="flex items-center">
+                                            <li key={`${p.inventory_id}-${index}`} className="p-4 grid grid-cols-12 gap-4 items-center">
+                                                <div className="col-span-6 flex items-center">
                                                     <Image
                                                         src={p.image_url || 'https://placehold.co/100x100/f8f9fa/e9ecef?text=Sin+Imagen'}
                                                         alt={p.product_name}
@@ -446,13 +473,34 @@ export default function ConsultaPage() {
                                                         <p className="text-sm text-gray-500">{p.sku} - {p.color} / {p.size}</p>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleRemoveProduct(p.inventory_id)}
-                                                    className="text-red-500 hover:text-red-700 font-semibold"
-                                                    title="Quitar de la lista"
-                                                >
-                                                    Quitar
-                                                </button>
+                                                <div className="col-span-4">
+                                                    <label htmlFor={`price-${p.inventory_id}`} className="sr-only">Precio</label>
+                                                    <div className="relative">
+                                                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                                                        <input 
+                                                            type="number"
+                                                            id={`price-${p.inventory_id}`}
+                                                            value={p.price}
+                                                            onChange={(e) => {
+                                                                const newPrice = e.target.value;
+                                                                setScannedProducts(prev => 
+                                                                    prev.map(prod => prod.inventory_id === p.inventory_id ? { ...prod, price: newPrice } : prod)
+                                                                );
+                                                            }}
+                                                            className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900"
+                                                            step="0.01"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-2 text-right">
+                                                    <button
+                                                        onClick={() => handleRemoveProduct(p.inventory_id)}
+                                                        className="text-red-500 hover:text-red-700 font-semibold"
+                                                        title="Quitar de la lista"
+                                                    >
+                                                        Quitar
+                                                    </button>
+                                                </div>
                                             </li>
                                         ))
                                     ) : (
