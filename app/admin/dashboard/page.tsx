@@ -185,9 +185,10 @@ export default function AdminDashboardPage() {
     }, []);
 
     // --- Estadísticas (sin cambios) ---
-    const lowStockCount = useMemo(() => inventory.filter(i => i.stock > 0 && i.stock < 5).length, [inventory]);
-    const outOfStockCount = useMemo(() => inventory.filter(i => i.stock === 0).length, [inventory]);
-    const activeBrandsCount = useMemo(() => [...new Set(inventory.map(i => i.brand))].length, [inventory]);
+    // Estas líneas se eliminan porque las estadísticas ahora se obtienen del servidor y no se usan estas variables.
+    // const lowStockCount = useMemo(() => inventory.filter(i => i.stock > 0 && i.stock < 5).length, [inventory]);
+    // const outOfStockCount = useMemo(() => inventory.filter(i => i.stock === 0).length, [inventory]);
+    // const activeBrandsCount = useMemo(() => [...new Set(inventory.map(i => i.brand))].length, [inventory]);
     
     // --- Columnas de la tabla para hacer el código más limpio ---
     const tableHeaders: { key: keyof InventoryItem; label: string; isSortable: boolean; className?: string }[] = useMemo(() => [
@@ -397,15 +398,6 @@ export default function AdminDashboardPage() {
                                         </svg>
                                     </button>
 
-                                    {/* Indicador de Página Actual */}
-                                    <div className="flex items-center space-x-1">
-                                        <span className="relative inline-flex items-center px-4 py-2 bg-blue-600 border border-blue-600 text-sm font-semibold rounded-lg text-white shadow-sm">
-                                            {currentPage}
-                                        </span>
-                                        <span className="text-sm font-medium text-gray-500">de</span>
-                                        <span className="text-sm font-semibold text-gray-900">{totalPages}</span>
-                                    </div>
-
                                     {/* Botón Página Siguiente */}
                                     <button 
                                         onClick={handleNextPage} 
@@ -426,7 +418,7 @@ export default function AdminDashboardPage() {
                                         title="Última página"
                                     >
                                         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0zm-6 0a1 1 0 010-1.414L8.586 10 4.293 5.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                         </svg>
                                     </button>
                                 </div>
