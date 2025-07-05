@@ -18,10 +18,10 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="flex h-screen w-screen bg-gray-50 overflow-hidden">
+    <div className="flex min-h-screen w-full bg-gray-50">
       {/* Sidebar - La anchura ahora es dinámica y tiene una transición suave */}
       <div
-        className={`h-full shadow-lg z-10 transition-all duration-300 ease-in-out ${
+        className={`shadow-lg z-10 transition-all duration-300 ease-in-out sticky top-0 h-screen ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
@@ -30,7 +30,7 @@ export default function AdminLayout({
       </div>
 
       {/* Main Content - Contenido principal de la página */}
-      <main className="flex-1 h-full overflow-y-auto">
+      <main className="flex-1">
         {children}
       </main>
     </div>
