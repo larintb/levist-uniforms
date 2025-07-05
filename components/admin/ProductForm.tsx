@@ -59,6 +59,9 @@ export interface ProductFormProps {
 // Este arreglo contiene todas las tallas únicas, estandarizadas y ordenadas lógicamente.
 const SIZES = [
   "XXS",
+  "XXS PET",
+  "XXS TAL",
+  "XXS SHR",
   "2XS PET",
   "2XS SHR",
   "2XS TAL",
@@ -85,6 +88,10 @@ const SIZES = [
   "XL SHR",
   "XL TAL",
   "XL",
+  "XXL",
+  "XXL PET",
+  "XXL SHR",
+  "XXL TAL",
   "1X PET",
   "1X TAL",
   "1X",

@@ -311,7 +311,7 @@ export function ProductsList() {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <h2 className="text-2xl font-semibold text-gray-800 self-start">Listado de Productos</h2>
                     <div className="w-full md:w-auto flex items-center gap-4">
-                        <input type="text" placeholder="Buscar por producto, SKU o marca" value={searchTerm} onChange={handleSearchChange} className="w-full md:w-64 pl-4 pr-4 py-2 text-base bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-500" />
+                        <input type="text" placeholder="Buscar por producto, SKU o marca" value={searchTerm} onChange={handleSearchChange} className="text-gray-600 w-full md:w-64 pl-4 pr-4 py-2 text-base bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-500" />
                         <Link href="/admin/products/new" className="flex-shrink-0 flex items-center justify-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow">
                             <PlusIcon /> Crear Producto
                         </Link>
