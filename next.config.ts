@@ -102,6 +102,13 @@ const nextConfig = {
         port: '',
         pathname: '/cdn/shop/files/**',
       },
+      // https://images.salsify.com/images/l2cjuddipf5kjifkdpi0/BOK80401XXS.jpg
+      {
+        protocol: 'https',
+        hostname: 'images.salsify.com',
+        port: '',
+        pathname: '/images/**',
+      },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
       // {
