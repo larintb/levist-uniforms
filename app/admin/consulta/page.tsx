@@ -387,7 +387,7 @@ export default function ConsultaPage() {
                         name="barcode"
                         id="barcode-input"
                         placeholder={mode === 'consulta' ? "Escanear código de producto u orden..." : "Escanear producto para agregar..."}
-                        className="w-full pl-12 pr-32 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600"
+                        className="text-gray-600 w-full pl-12 pr-32 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600"
                         autoComplete="off"
                     />
                     <button
