@@ -9,6 +9,9 @@ type OrderDetail = {
     order_id: string;
     order_date: string;
     order_total: number;
+    subtotal: number;
+    discount_amount: number;
+    discount_reason: string | null;
     order_status: string;
     requires_invoice: boolean;
     payment_method: string | null;
@@ -62,14 +65,7 @@ const LogoComponent = ({ className }: { className?: string }) => {
     );
 };
 
-
-// =================================================================
-// INICIO DE LAS CORRECCIONES DE ESLINT
-// =================================================================
-
-// --- Componente CustomerTicket (EXTRAÍDO) ---
-// Se extrajo el componente para evitar "unstable nested components".
-// Ahora recibe toda su información a través de props.
+// --- Componente CustomerTicket (CORREGIDO) ---
 interface CustomerTicketProps {
     title: string;
     details: OrderDetail;
@@ -77,9 +73,11 @@ interface CustomerTicketProps {
     needsInvoice: boolean;
     subtotal: number;
     iva: number;
+    discountAmount: number;
+    discountReason: string | null;
 }
 
-const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal, iva }: CustomerTicketProps) => (
+const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal, iva, discountAmount, discountReason }: CustomerTicketProps) => (
     <div className="bg-white text-black p-1 font-mono">
         <header className="text-center mb-1">
             <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
@@ -90,7 +88,7 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
 
         <section className="my-1 text-[10px] leading-tight space-y-0.5">
             <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-            <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX')}</p>
+            <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
             <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
             <p><b>Cliente:</b> {details.customer_name || 'Mostrador'}</p>
         </section>
@@ -118,7 +116,6 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                             <span>{item.quantity}x {item.product_name}</span>
                         </div>
                         <div className="w-14 text-right pr-2">
-                            {/* CORRECCIÓN: Se elimina el `Number()` redundante */}
                             ${item.price_at_sale.toFixed(2)}
                         </div>
                         <div className="w-14 text-right">
@@ -129,28 +126,33 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             </div>
         </section>
         
-        <section className="mt-1 text-xs">
-            {needsInvoice ? (
-                <>
-                    <div className="flex justify-between text-[10px]">
-                        <span>SUBTOTAL:</span>
-                        <span>${subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                        <span>IVA (16%):</span>
-                        <span>${iva.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-sm border-t border-dashed border-black mt-1 pt-1">
-                        <span>TOTAL:</span>
-                        <span>${details.order_total.toFixed(2)}</span>
-                    </div>
-                </>
-            ) : (
-                <div className="flex justify-between font-bold text-sm pt-1 mt-1">
-                    <span>TOTAL:</span>
-                    <span>${details.order_total.toFixed(2)}</span>
+        <section className="mt-1 text-xs space-y-0.5">
+            <div className="flex justify-between text-[10px]">
+                <span>SUBTOTAL:</span>
+                <span>${subtotal.toFixed(2)}</span>
+            </div>
+
+            {/* ================================================================= */}
+            {/* CORRECCIÓN: Se eliminó la condición para que siempre se muestre. */}
+            {/* ================================================================= */}
+            <div className="flex justify-between text-[10px] text-green-700">
+                <span>DESCUENTO ({discountReason || 'General'}):</span>
+                <span>-${(discountAmount || 0).toFixed(2)}</span>
+            </div>
+            {/* ================================================================= */}
+            
+            {needsInvoice && (
+                <div className="flex justify-between text-[10px]">
+                    <span>IVA (16%):</span>
+                    <span>${iva.toFixed(2)}</span>
                 </div>
             )}
+
+            <div className="flex justify-between font-bold text-sm border-t border-dashed border-black mt-1 pt-1">
+                <span>TOTAL:</span>
+                <span>${details.order_total.toFixed(2)}</span>
+            </div>
+
             <div className="flex justify-between text-[10px] mt-1">
                 <span>Método Pago:</span>
                 <span>{details.payment_method || 'N/A'}</span>
@@ -167,8 +169,7 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
 );
 
 
-// --- Componente WorkOrderTicket (EXTRAÍDO) ---
-// Se extrajo el componente para evitar "unstable nested components".
+// --- Componente WorkOrderTicket (Sin cambios) ---
 interface WorkOrderTicketProps {
     details: OrderDetail;
 }
@@ -211,44 +212,33 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
     </div>
 );
 
-// =================================================================
-// FIN DE LAS CORRECCIONES
-// =================================================================
 
-
-// --- Componente Principal del Recibo ---
+// --- Componente Principal del Recibo (Sin cambios) ---
 export function Receipt({ details }: ReceiptProps) {
     
-    // CORRECCIÓN: Se usa `useCallback` para memorizar la función.
     const handlePrint = React.useCallback(() => {
         window.print();
     }, []);
 
     const isSpecialOrder = details.order_status !== 'COMPLETED' && details.order_status !== 'DELIVERED';
-    
     const needsInvoice = details.requires_invoice;
 
-    // CORRECCIÓN: El "magic number" se extrae a una constante.
-    const VAT_RATE = 1.16;
-    
-    // El uso de `useMemo` aquí asegura que el cálculo solo se rehaga si los detalles de la orden cambian.
-    const { subtotal, iva } = React.useMemo(() => {
-        let calculatedSubtotal = 0;
-        let calculatedIva = 0;
+    const { subtotal, iva, discountAmount, discountReason } = React.useMemo(() => {
+        const preDiscountSubtotal = details.items.reduce((acc, item) => {
+            return acc + (item.price_at_sale * item.quantity);
+        }, 0);
+
+        const calculatedIva = needsInvoice ? (details.order_total - (details.order_total / 1.16)) : 0;
         
-        if (needsInvoice) {
-            calculatedSubtotal = details.order_total / VAT_RATE;
-            calculatedIva = details.order_total - calculatedSubtotal;
-            
-            const decimal = calculatedIva - Math.floor(calculatedIva);
-            if (decimal > 0) {
-                calculatedIva = Math.ceil(calculatedIva);
-                calculatedSubtotal = details.order_total - calculatedIva;
-            }
-        }
+        const calculatedDiscount = preDiscountSubtotal + calculatedIva - details.order_total;
         
-        return { subtotal: calculatedSubtotal, iva: calculatedIva };
-    }, [details.order_total, needsInvoice]);
+        return {
+            subtotal: preDiscountSubtotal,
+            iva: calculatedIva,
+            discountAmount: calculatedDiscount,
+            discountReason: details.discount_reason
+        };
+    }, [details, needsInvoice]);
 
     return (
         <div className="bg-gray-100 p-4">
@@ -284,6 +274,8 @@ export function Receipt({ details }: ReceiptProps) {
                             needsInvoice={needsInvoice}
                             subtotal={subtotal}
                             iva={iva}
+                            discountAmount={discountAmount}
+                            discountReason={discountReason}
                         />
                         <div className="cut-line text-center text-[9px] text-gray-500 border-t-2 border-dashed border-black my-2 py-1">
                             &ndash; &ndash; Cortar &ndash; &ndash;
@@ -298,6 +290,8 @@ export function Receipt({ details }: ReceiptProps) {
                         needsInvoice={needsInvoice}
                         subtotal={subtotal}
                         iva={iva}
+                        discountAmount={discountAmount}
+                        discountReason={discountReason}
                     />
                 )}
             </div>
