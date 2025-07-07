@@ -109,6 +109,13 @@ const nextConfig = {
         port: '',
         pathname: '/images/**',
       },
+      // https://adaruniforms.com/ftp_images/pro/model_images/4400/4400_hgr_t_part_fv.jpg
+      {
+        protocol: 'https',
+        hostname: 'adaruniforms.com',
+        port: '',
+        pathname: '/**',
+      },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
       // {
