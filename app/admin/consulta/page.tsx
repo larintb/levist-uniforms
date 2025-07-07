@@ -214,7 +214,7 @@ function OrderCard({ order }: { order: OrderDetails }) {
                     <div>
                         {order.embroidery_notes && (
                             <p className="text-sm text-gray-600">
-                                <span className="font-bold">Notas de bordado:</span> {order.embroidery_notes}
+                                <span className="text-gray-600 font-bold">Notas de bordado:</span> {order.embroidery_notes}
                             </p>
                         )}
                         {order.school_name && (

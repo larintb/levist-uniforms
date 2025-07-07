@@ -32,5 +32,11 @@ export async function updateOrderStatus(orderId: string, newStatus: string): Pro
     revalidatePath('/admin/orders');
     revalidatePath(`/admin/orders/${orderId}`);
 
+    // Si el nuevo estado es 'COMPLETED', también revalidamos los productos para reflejar el stock
+    if (newStatus === 'COMPLETED') {
+        revalidatePath('/admin/products');
+        revalidatePath('/admin/dashboard');
+    }
+
     return { success: true, message: "Estado de la orden actualizado con éxito." };
 }
