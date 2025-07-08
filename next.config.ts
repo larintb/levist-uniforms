@@ -121,7 +121,7 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'www.adaruniforms.com',
         port: '',
-        pathname: '/**',
+        pathname: '/ftp_images/**',
       },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
