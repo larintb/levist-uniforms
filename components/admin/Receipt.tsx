@@ -19,6 +19,9 @@ type OrderDetail = {
     customer_name: string | null;
     embroidery_notes: string | null;
     school_name?: string;
+    is_layaway: boolean;
+    down_payment: number;
+    remaining_balance: number;
     items: {
         item_id: string;
         product_name: string;
@@ -135,7 +138,7 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             {/* ================================================================= */}
             {/* CORRECCIÓN: Se eliminó la condición para que siempre se muestre. */}
             {/* ================================================================= */}
-            <div className="flex justify-between text-[10px] text-green-700">
+            <div className="flex justify-between text-[10px] text-black">
                 <span>DESCUENTO ({discountReason || 'General'}):</span>
                 <span>-${(discountAmount || 0).toFixed(2)}</span>
             </div>
@@ -157,6 +160,29 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                 <span>Método Pago:</span>
                 <span>{details.payment_method || 'N/A'}</span>
             </div>
+
+            {details.is_layaway && (
+                <div className="border-t border-dashed border-black mt-1 pt-1">
+                    <div className="text-center text-xs font-bold mb-1 bg-blue-50 p-1 rounded">
+                        🏦 SEPARADO
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                        <span>Anticipo Pagado:</span>
+                        <span className="text-black font-bold">-${details.down_payment.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                        <span>Saldo Pendiente:</span>
+                        <span className={`font-bold ${details.remaining_balance > 0 ? 'text-black' : 'text-black'}`}>
+                            ${details.remaining_balance.toFixed(2)}
+                        </span>
+                    </div>
+                    {details.remaining_balance > 0 && (
+                        <div className="text-center text-[10px] mt-1 p-1 bg-yellow-50 rounded">
+                            ⚠️ RECUERDE COMPLETAR EL PAGO
+                        </div>
+                    )}
+                </div>
+            )}
         </section>
         
         <footer className="mt-2 pt-1 border-t border-dashed border-black flex flex-col items-center text-center">

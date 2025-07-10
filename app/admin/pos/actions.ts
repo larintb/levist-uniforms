@@ -81,6 +81,9 @@ export type SalePayload = {
     discountAmount: number;
     discountReason: string;
     total: number;
+    isLayaway: boolean;
+    downPayment: number;
+    remainingBalance: number;
 };
 
 // --- Acciones del Servidor ---
@@ -200,16 +203,28 @@ export async function findProductByBarcode(barcode: string): Promise<FindResult>
 }
 
 export async function processSaleAction(payload: SalePayload): Promise<SaleResult> {
-    const { cartItems, paymentMethod, specialOrderData, requiresInvoice, subtotal, discountAmount, discountReason, total } = payload;
+    const { cartItems, paymentMethod, specialOrderData, requiresInvoice, subtotal, discountAmount, discountReason, total, isLayaway, downPayment, remainingBalance } = payload;
     if (!cartItems || cartItems.length === 0) return { success: false, message: "El carrito no puede estar vacío." };
     if (!paymentMethod) return { success: false, message: "Debe seleccionar un método de pago." };
     if (specialOrderData.isSpecialOrder && !specialOrderData.customerName) return { success: false, message: "El nombre del cliente es obligatorio para pedidos especiales." };
+    if (isLayaway && downPayment <= 0) return { success: false, message: "El anticipo debe ser mayor a $0 para separados." };
+    if (isLayaway && downPayment > total) return { success: false, message: "El anticipo no puede ser mayor al total." };
     
     const supabase = await createClient();
+    
+    // Determinar el estado de la orden basado en si es separado o no
+    let orderStatus = 'COMPLETED';
+    if (specialOrderData.isSpecialOrder) {
+        orderStatus = 'PENDING_EMBROIDERY';
+    }
+    if (isLayaway) {
+        orderStatus = remainingBalance > 0 ? 'PENDING_PAYMENT' : 'COMPLETED';
+    }
+    
     const rpcParams = {
         p_cart_items: cartItems,
         p_payment_method: paymentMethod,
-        p_status: specialOrderData.isSpecialOrder ? 'PENDING_EMBROIDERY' : 'COMPLETED',
+        p_status: orderStatus,
         p_customer_name: specialOrderData.isSpecialOrder ? specialOrderData.customerName : 'Cliente Mostrador',
         p_customer_phone: specialOrderData.customerPhone || null,
         p_school_id: specialOrderData.schoolId || null,
@@ -218,7 +233,10 @@ export async function processSaleAction(payload: SalePayload): Promise<SaleResul
         p_subtotal: subtotal,
         p_discount_amount: discountAmount,
         p_discount_reason: discountReason,
-        p_total: total
+        p_total: total,
+        p_is_layaway: isLayaway,
+        p_down_payment: downPayment,
+        p_remaining_balance: remainingBalance
     };
     try {
         const { data: newOrderId, error } = await supabase.rpc('process_sale', rpcParams);

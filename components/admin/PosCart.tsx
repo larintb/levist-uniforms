@@ -198,7 +198,7 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
                     <span>${subtotal.toFixed(2)}</span>
                 </div>
                 {discountAmount > 0 && (
-                    <div className="flex justify-between text-green-600">
+                    <div className="flex justify-between text-black">
                         <span>Descuento ({discountReason})</span>
                         <span>-${discountAmount.toFixed(2)}</span>
                     </div>
