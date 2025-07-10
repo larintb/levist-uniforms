@@ -117,11 +117,14 @@ const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, 
 };
 
 // --- Componente: Carrito de Compra (Compartido) ---
-const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, onOpenSpecialOrderModal }: { items: CartItem[], onUpdateQuantity: (inventoryId: string, newQuantity: number) => void, onProcessSale: (paymentMethod: string, discount: number, total: number) => void, isProcessing: boolean, requiresInvoice: boolean, setRequiresInvoice: (value: boolean) => void, isSpecialOrder: boolean, setIsSpecialOrder: (value: boolean) => void, onOpenSpecialOrderModal: () => void }) => {
+const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, onOpenSpecialOrderModal }: { items: CartItem[], onUpdateQuantity: (inventoryId: string, newQuantity: number) => void, onProcessSale: (paymentMethod: string, discount: number, total: number, isLayaway?: boolean, downPayment?: number) => void, isProcessing: boolean, requiresInvoice: boolean, setRequiresInvoice: (value: boolean) => void, isSpecialOrder: boolean, setIsSpecialOrder: (value: boolean) => void, onOpenSpecialOrderModal: () => void }) => {
     const [discount, setDiscount] = useState(0);
+    const [isLayaway, setIsLayaway] = useState(false);
+    const [downPayment, setDownPayment] = useState(0);
     const subtotal = useMemo(() => items.reduce((acc, item) => acc + item.price * item.quantity, 0), [items]);
     const iva = useMemo(() => requiresInvoice ? (subtotal - discount) * 0.16 : 0, [subtotal, discount, requiresInvoice]);
     const total = useMemo(() => subtotal - discount + iva, [subtotal, discount, iva]);
+    const remainingBalance = useMemo(() => isLayaway ? total - downPayment : 0, [isLayaway, total, downPayment]);
 
     const handleQuantityChange = (inventoryId: string, delta: number) => {
         const item = items.find(i => i.inventory_id === inventoryId);
@@ -137,6 +140,27 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
         if (newIsSpecialOrder) {
             onOpenSpecialOrderModal();
         }
+    };
+
+    const handleLayawayToggle = () => {
+        const newIsLayaway = !isLayaway;
+        setIsLayaway(newIsLayaway);
+        if (newIsLayaway) {
+            // Al activar separado, por defecto requerir datos del cliente
+            if (!isSpecialOrder) {
+                setIsSpecialOrder(true);
+                onOpenSpecialOrderModal();
+            }
+            // Establecer un anticipo por defecto del 50%
+            setDownPayment(total * 0.5);
+        } else {
+            setDownPayment(0);
+        }
+    };
+
+    const handleDownPaymentChange = (value: number) => {
+        const clampedValue = Math.max(0, Math.min(value, total));
+        setDownPayment(clampedValue);
     };
 
     return (
@@ -163,16 +187,58 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
                 <div className="space-y-4 mb-6">
                     <button onClick={() => setRequiresInvoice(!requiresInvoice)} className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"><span className="font-semibold text-gray-800">¿Requiere Factura?</span><CheckboxIcon checked={requiresInvoice} /></button>
                     <button onClick={handleSpecialOrderToggle} className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"><span className="font-semibold text-gray-800">¿Es Pedido Especial?</span><CheckboxIcon checked={isSpecialOrder} /></button>
+                    <button onClick={handleLayawayToggle} className="w-full flex items-center justify-between p-4 rounded-xl bg-blue-100 hover:bg-blue-200 transition-colors"><span className="font-semibold text-gray-800">¿Es Separado?</span><CheckboxIcon checked={isLayaway} /></button>
                 </div>
                 <div className="space-y-3 text-lg">
                     <div className="text-black flex justify-between font-medium"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
                     <div className="text-black flex justify-between items-center"><label htmlFor="discount" className="font-medium">Descuento</label><input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))} className="w-28 p-2 text-right font-bold border border-gray-300 rounded-lg"/></div>
                     {requiresInvoice && <div className="flex justify-between text-gray-600"><span>IVA (16%)</span><span>${iva.toFixed(2)}</span></div>}
                     <div className="flex justify-between text-2xl font-bold text-gray-900 border-t pt-3 mt-3"><span>TOTAL</span><span>${total.toFixed(2)}</span></div>
+                    
+                    {isLayaway && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
+                            <h4 className="font-semibold text-blue-900">Detalles del Separado</h4>
+                            <div className="flex justify-between items-center">
+                                <label htmlFor="downPayment" className="font-medium text-blue-800">Anticipo</label>
+                                <input 
+                                    id="downPayment" 
+                                    type="number" 
+                                    value={downPayment} 
+                                    onChange={(e) => handleDownPaymentChange(parseFloat(e.target.value) || 0)} 
+                                    className="w-28 p-2 text-right font-bold border border-blue-300 rounded-lg"
+                                    max={total}
+                                    min={0}
+                                    step="0.01"
+                                />
+                            </div>
+                            <div className="flex justify-between text-blue-800">
+                                <span>Saldo Pendiente:</span>
+                                <span className="font-bold">${remainingBalance.toFixed(2)}</span>
+                            </div>
+                            {downPayment <= 0 && (
+                                <p className="text-red-600 text-sm font-medium">⚠️ El anticipo debe ser mayor a $0</p>
+                            )}
+                            {downPayment >= total && (
+                                <p className="text-green-600 text-sm font-medium">✅ Pago completo</p>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <div className="mt-6 grid grid-cols-2 gap-4">
-                    <button onClick={() => onProcessSale('Efectivo', discount, total)} disabled={isProcessing || items.length === 0} className="w-full p-4 text-lg font-bold text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700 disabled:bg-gray-400">Efectivo</button>
-                    <button onClick={() => onProcessSale('Tarjeta', discount, total)} disabled={isProcessing || items.length === 0} className="w-full p-4 text-lg font-bold text-white bg-indigo-500 rounded-xl shadow-md hover:bg-indigo-600 disabled:bg-gray-400">Tarjeta</button>
+                    <button 
+                        onClick={() => onProcessSale('Efectivo', discount, total, isLayaway, downPayment)} 
+                        disabled={isProcessing || items.length === 0 || (isLayaway && downPayment <= 0)} 
+                        className="w-full p-4 text-lg font-bold text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700 disabled:bg-gray-400"
+                    >
+                        Efectivo
+                    </button>
+                    <button 
+                        onClick={() => onProcessSale('Tarjeta', discount, total, isLayaway, downPayment)} 
+                        disabled={isProcessing || items.length === 0 || (isLayaway && downPayment <= 0)} 
+                        className="w-full p-4 text-lg font-bold text-white bg-indigo-500 rounded-xl shadow-md hover:bg-indigo-600 disabled:bg-gray-400"
+                    >
+                        Tarjeta
+                    </button>
                 </div>
                 {isProcessing && <p className="text-center mt-4 text-gray-800 font-medium">Procesando venta...</p>}
             </div>
@@ -372,17 +438,24 @@ export default function PosPage() {
         else setCart(currentCart => currentCart.map(item => item.inventory_id === inventoryId ? { ...item, quantity: newQuantity } : item));
     };
 
-    const handleProcessSale = (paymentMethod: string, discount: number, total: number) => {
+    const handleProcessSale = (paymentMethod: string, discount: number, total: number, isLayaway: boolean = false, downPayment: number = 0) => {
         startTransition(async () => {
             setError(null);
             if (cart.length === 0) { setError("El carrito está vacío."); return; }
             if (isSpecialOrder && !specialOrderDetails.customerName) { setError("El nombre del cliente es obligatorio para pedidos especiales."); return; }
+            if (isLayaway && downPayment <= 0) { setError("El anticipo debe ser mayor a $0 para separados."); return; }
+            if (isLayaway && downPayment > total) { setError("El anticipo no puede ser mayor al total."); return; }
             
             const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+            const remainingBalance = isLayaway ? total - downPayment : 0;
+            
             const payload: SalePayload = {
                 cartItems: cart.map(item => ({ inventory_id: item.inventory_id, quantity: item.quantity, price_at_sale: item.price })),
                 paymentMethod, subtotal, discountAmount: discount, discountReason: discount > 0 ? 'Descuento en POS' : '', total, requiresInvoice,
-                specialOrderData: { isSpecialOrder, ...specialOrderDetails }
+                specialOrderData: { isSpecialOrder, ...specialOrderDetails },
+                isLayaway,
+                downPayment,
+                remainingBalance
             };
             const result = await processSaleAction(payload);
             if (result.success && result.orderId) {

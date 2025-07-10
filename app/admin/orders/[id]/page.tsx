@@ -23,6 +23,9 @@ type OrderDetailsForReceipt = {
     embroidery_notes: string | null;
     requires_invoice: boolean;
     school_name?: string;
+    is_layaway: boolean;
+    down_payment: number;
+    remaining_balance: number;
     items: {
         item_id: string;
         product_name: string;
@@ -53,7 +56,7 @@ async function getOrderDetailsForReceipt(orderId: string): Promise<OrderDetailsF
     // 2. Obtener detalles a nivel de orden (como la razón del descuento) directamente de la tabla de órdenes
     const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('discount_reason, subtotal, discount_amount') // Obtenemos los valores fiables
+        .select('discount_reason, subtotal, discount_amount, is_layaway, down_payment, remaining_balance') // Incluimos campos de separado
         .eq('id', orderId)
         .single();
     
@@ -90,6 +93,9 @@ async function getOrderDetailsForReceipt(orderId: string): Promise<OrderDetailsF
         embroidery_notes: orderInfo.embroidery_notes,
         requires_invoice: orderInfo.requires_invoice,
         school_name: orderInfo.school_name,
+        is_layaway: orderData.is_layaway,
+        down_payment: orderData.down_payment,
+        remaining_balance: orderData.remaining_balance,
         items: items,
     };
 
