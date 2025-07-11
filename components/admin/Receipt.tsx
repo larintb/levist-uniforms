@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import QRCode from 'react-qr-code';
+import { MultiCopyPrintButton } from './MultiCopyPrintButton';
 
 // --- Tipos de Datos (sin cambios) ---
 type OrderDetail = {
@@ -280,7 +281,7 @@ export function Receipt({ details }: ReceiptProps) {
                 }
             `}</style>
 
-            <div className="no-print text-center mb-6">
+            <div className="no-print text-center mb-6 space-y-3">
                 <button 
                     onClick={handlePrint}
                     className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -288,6 +289,19 @@ export function Receipt({ details }: ReceiptProps) {
                     <PrintIcon className="h-5 w-5"/>
                     Imprimir Ticket
                 </button>
+                
+                <div className="mt-3">
+                    <MultiCopyPrintButton 
+                        orderId={details.order_id}
+                        orderHasEmbroidery={!!details.embroidery_notes}
+                        className="inline-flex items-center gap-2 bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-amber-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        buttonText="Imprimir Órdenes de Trabajo"
+                        showIcons={false}
+                    />
+                    <p className="text-xs text-gray-600 mt-2">
+                        💡 Imprime solo las órdenes de trabajo (sin ticket de venta) - ideal para el taller
+                    </p>
+                </div>
             </div>
 
             <div className="printable-area">

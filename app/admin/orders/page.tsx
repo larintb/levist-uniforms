@@ -5,6 +5,7 @@ import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { updateOrderStatus, completeLayawayPayment } from './actions';
 import { sendWhatsAppNotification } from './[id]/actions';
+import { MultiCopyPrintButton } from '@/components/admin/MultiCopyPrintButton';
 
 // --- Tipos de Datos ---
 type OrderItem = {
@@ -65,11 +66,6 @@ type OrderViewRow = {
     price_at_sale: number;
 };
 
-// --- Iconos ---
-const PrintIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6 18.25m10.56-4.421c.24.03.48.062.72.096m-.72-.096L18 18.25m-12 0h12M12 15V9m0 2.25a.75.75 0 00-.75.75v4.5a.75.75 0 001.5 0v-4.5a.75.75 0 00-1.5 0v-4.5A.75.75 0 0012 11.25z" /></svg>;
-const NotifyIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>;
-const UpdateIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691V5.25a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25h6.75a2.25 2.25 0 002.25-2.25z" /></svg>;
-
 // --- Componente de Insignia de Estado (Diseño Mejorado) ---
 const StatusBadge = ({ status }: { status: string | null }) => {
     const statusInfo = {
@@ -110,11 +106,19 @@ const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter }:
                 {orders.map(order => (
                     <li key={order.id}>
                         <button onClick={() => setSelectedOrder(order)} className={`w-full text-left p-4 transition-colors ${selectedOrder?.id === order.id ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
-                            <div className="flex justify-between items-center">
-                                <p className="font-semibold text-gray-800 truncate">{order.customer_name || 'Cliente Mostrador'}</p>
-                                <p className="text-base font-bold text-gray-900">${(order.total || 0).toFixed(2)}</p>
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-800 truncate">{order.customer_name || 'Cliente Mostrador'}</p>
+                                    {order.customer_phone && (
+                                        <p className="text-xs text-gray-600 mt-0.5 truncate">📞 {order.customer_phone}</p>
+                                    )}
+                                    {order.school_name && (
+                                        <p className="text-xs text-blue-600 mt-0.5 truncate font-medium">🏫 {order.school_name}</p>
+                                    )}
+                                </div>
+                                <p className="text-base font-bold text-gray-900 ml-2">${(order.total || 0).toFixed(2)}</p>
                             </div>
-                            <div className="flex justify-between items-center mt-1">
+                            <div className="flex justify-between items-center mt-2">
                                 <p className="text-xs text-gray-500 font-mono">#{order.id.toUpperCase().slice(0, 8)}</p>
                                 <StatusBadge status={order.status} />
                             </div>
@@ -131,14 +135,23 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
     const [isUpdating, startUpdateTransition] = useTransition();
     const [isNotifying, startNotifyTransition] = useTransition();
     const [showStatusModal, setShowStatusModal] = useState(false);
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
 
-    if (!order) return <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-8 text-center"><UpdateIcon className="h-16 w-16 text-gray-300" /><h2 className="mt-4 text-2xl font-bold text-gray-800">Selecciona una orden</h2><p className="mt-1 text-gray-600">Toca una orden de la lista para ver sus detalles aqui.</p></div>;
+    if (!order) return <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-8 text-center"><div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 text-2xl font-bold mb-4">📋</div><h2 className="mt-4 text-2xl font-bold text-gray-800">Selecciona una orden</h2><p className="mt-1 text-gray-600">Toca una orden de la lista para ver sus detalles aqui.</p></div>;
     
     const handleNotify = () => {
-        if (!order.customer_phone || !order.customer_name) { alert("Este cliente no tiene un numero de telefono o nombre para notificar."); return; }
+        if (!order.customer_phone || !order.customer_name) { 
+            alert("Este cliente no tiene un numero de telefono o nombre para notificar."); 
+            return; 
+        }
+        setShowNotifyModal(true);
+    };
+
+    const handleConfirmNotify = () => {
         startNotifyTransition(async () => {
             const result = await sendWhatsAppNotification(order.customer_phone!, order.customer_name!, order.id);
             alert(result.message);
+            setShowNotifyModal(false);
         });
     };
 
@@ -182,9 +195,35 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
                     <p className="text-sm text-gray-600 truncate">Cliente: {order.customer_name}</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <button onClick={handlePrintReceipt} className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" title="Imprimir Recibo"><PrintIcon className="h-5 w-5" /></button>
-                    <button onClick={() => setShowStatusModal(true)} className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" title="Actualizar Estado"><UpdateIcon className="h-5 w-5" /></button>
-                    <button onClick={handleNotify} disabled={isNotifying || !order.customer_phone} className="p-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Notificar Cliente"><NotifyIcon className="h-5 w-5" /></button>
+                    <button 
+                        onClick={handlePrintReceipt} 
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                        title="Imprimir Recibo"
+                    >
+                        Recibo
+                    </button>
+                    <MultiCopyPrintButton 
+                        orderId={order.id} 
+                        orderHasEmbroidery={!!order.embroidery_notes}
+                        className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium"
+                        buttonText="Múltiples"
+                        showIcons={false}
+                    />
+                    <button 
+                        onClick={() => setShowStatusModal(true)} 
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                        title="Actualizar Estado"
+                    >
+                        Estado
+                    </button>
+                    <button 
+                        onClick={handleNotify} 
+                        disabled={isNotifying || !order.customer_phone} 
+                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                        title="Notificar Cliente"
+                    >
+                        {isNotifying ? 'Enviando...' : 'Notificar'}
+                    </button>
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -238,6 +277,36 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
                     </div>
                 }
             </div>
+            {showNotifyModal && 
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowNotifyModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-center mb-4 text-black">Confirmar Notificación</h3>
+                        <div className="mb-6 text-center">
+                            <p className="text-gray-700 mb-2">¿Deseas enviar una notificación por WhatsApp a:</p>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="font-semibold text-gray-900">{order.customer_name}</p>
+                                <p className="text-sm text-gray-600">📞 {order.customer_phone}</p>
+                                <p className="text-xs text-gray-500 mt-2">Orden: #{order.id.toUpperCase().slice(0, 8)}</p>
+                            </div>
+                        </div>
+                        <div className="flex space-x-3">
+                            <button 
+                                onClick={() => setShowNotifyModal(false)}
+                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleConfirmNotify}
+                                disabled={isNotifying}
+                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isNotifying ? 'Enviando...' : 'Enviar Notificación'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
             {showStatusModal && 
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowStatusModal(false)}>
                     <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
