@@ -36,21 +36,32 @@ export function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
   return (
     <div className="flex flex-col h-full bg-gray-800 text-white">
       <div className="p-4">
-        <div className="flex items-center justify-between h-12 mb-4">
-          <div className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-             <Image src="/logo.jpg" alt="Levist Uniforms Logo" width={32} height={32} className="rounded-md" />
-             <div className="flex flex-col">
+        <div className="flex items-center justify-center mb-4">
+          <div className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'justify-center' : 'justify-start w-full'}`}>
+             <Image src="/logo.jpg" alt="Levist Uniforms Logo" width={32} height={32} className="rounded-md flex-shrink-0" />
+             <div className={`flex flex-col overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
                 <h1 className="text-xl font-bold whitespace-nowrap">Levist</h1>
              </div>
           </div>
-          <button onClick={toggleSidebar} className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white"><MenuIcon className="h-6 w-6" /></button>
         </div>
-        <ul className="space-y-2 flex-1">
+        
+        <button
+          onClick={toggleSidebar}
+          className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 h-9 mb-4 transition-all text-gray-400 hover:bg-gray-700 hover:text-white ${isCollapsed ? 'justify-center px-0' : ''}`}
+          title={isCollapsed ? 'Acoplar' : 'Acoplar'}
+        >
+          <MenuIcon className="h-5 w-5 flex-shrink-0" />
+          <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+            Acoplar
+          </span>
+        </button>
+        
+        <ul className="space-y-1 flex-1">
           {navLinks.map((link) => {
             const isActive = pathname.startsWith(link.href);
             return (
               <li key={link.name}>
-                <Link href={link.href} title={isCollapsed ? link.name : ''} className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-gray-700 ${isActive ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'} ${isCollapsed ? 'justify-center' : ''}`}>
+                <Link href={link.href} title={isCollapsed ? link.name : ''} className={`flex items-center gap-3 rounded-lg px-3 py-2 h-9 transition-all hover:bg-gray-700 ${isActive ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-white'} ${isCollapsed ? 'justify-center px-0' : ''}`}>
                   <link.icon className="h-5 w-5 flex-shrink-0" />
                   <span className={`whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{link.name}</span>
                 </Link>
@@ -64,7 +75,7 @@ export function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
         <form action={signout}>
             <button
                 type="submit"
-                className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 transition-all text-gray-400 hover:bg-red-900/50 hover:text-white ${isCollapsed ? 'justify-center' : ''}`}
+                className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 h-9 transition-all text-gray-400 hover:bg-red-900/50 hover:text-white ${isCollapsed ? 'justify-center px-0' : ''}`}
                 title={isCollapsed ? 'Cerrar Sesión' : ''}
             >
                 <LogoutIcon className="h-5 w-5 flex-shrink-0" />
