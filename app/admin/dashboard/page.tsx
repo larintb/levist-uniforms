@@ -72,10 +72,10 @@ export default function AdminDashboardPage() {
 
     // --- NUEVO: Estados para las estadísticas ---
     const [stats, setStats] = useState({
-        totalSkus: 0,
-        lowStock: 0,
-        outOfStock: 0,
-        activeBrands: 0,
+        pendingEmbroideryOrders: 0,
+        variantsInStock: 0,
+        totalInventoryValue: 0,
+        ordersThisMonth: 0,
     });
     const [loadingStats, setLoadingStats] = useState(true);
 
@@ -116,17 +116,48 @@ export default function AdminDashboardPage() {
     const fetchStats = useCallback(async () => {
         try {
             setLoadingStats(true);
-            const { count: totalSkus } = await supabase.from('inventory').select('id', { count: 'exact', head: true });
-            const { count: lowStock } = await supabase.from('inventory').select('id', { count: 'exact', head: true }).gt('stock', 0).lt('stock', 5);
-            const { count: outOfStock } = await supabase.from('inventory').select('id', { count: 'exact', head: true }).eq('stock', 0);
-            const { data: brandsData, error: brandsError } = await supabase.from('brands').select('id');
-            if(brandsError) throw brandsError;
+            
+            // 1. Órdenes pendientes de Embroidery (status = 'embroidery' o similar)
+            const { count: pendingEmbroideryOrders } = await supabase
+                .from('orders')
+                .select('id', { count: 'exact', head: true })
+                .or('status.eq.PENDING_EMBROIDERY');
+            
+            // 2. Variantes de producto en stock (inventario con stock > 0)
+            const { count: variantsInStock } = await supabase
+                .from('inventory')
+                .select('id', { count: 'exact', head: true })
+                .gt('stock', 0);
+            
+            // 3. Valor total del inventario en stock (excluyendo bordado90 y bordado80)
+            const { data: inventoryData, error: inventoryError } = await supabase
+                .from('full_inventory_details')
+                .select('stock, price, product_name')
+                .gt('stock', 0)
+                .not('product_name', 'ilike', '%Bordado%')
+                .not('product_name', 'ilike', '%Bordado Promo%');
+
+            if (inventoryError) throw inventoryError;
+            
+            const totalInventoryValue = inventoryData?.reduce((total, item) => {
+                return total + (item.stock * item.price);
+            }, 0) || 0;
+            
+            // 4. Órdenes del mes actual
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+            
+            const { count: ordersThisMonth } = await supabase
+                .from('orders')
+                .select('id', { count: 'exact', head: true })
+                .gte('created_at', startOfMonth.toISOString());
 
             setStats({
-                totalSkus: totalSkus || 0,
-                lowStock: lowStock || 0,
-                outOfStock: outOfStock || 0,
-                activeBrands: brandsData?.length || 0,
+                pendingEmbroideryOrders: pendingEmbroideryOrders || 0,
+                variantsInStock: variantsInStock || 0,
+                totalInventoryValue: totalInventoryValue,
+                ordersThisMonth: ordersThisMonth || 0,
             });
 
         } catch (err) {
@@ -209,10 +240,10 @@ export default function AdminDashboardPage() {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Total de SKUs" value={loadingStats ? "..." : stats.totalSkus} color="#3B82F6" />
-                <StatCard title="Stock Bajo (<5)" value={loadingStats ? "..." : stats.lowStock} color="#F59E0B" />
-                <StatCard title="Agotados" value={loadingStats ? "..." : stats.outOfStock} color="#EF4444" />
-                <StatCard title="Marcas Activas" value={loadingStats ? "..." : stats.activeBrands} color="#10B981" />
+                <StatCard title="Órdenes Pendientes (Bordado)" value={loadingStats ? "..." : stats.pendingEmbroideryOrders} color="#F59E0B" />
+                <StatCard title="Variantes en Stock" value={loadingStats ? "..." : stats.variantsInStock} color="#10B981" />
+                <StatCard title="Valor Total Inventario" value={loadingStats ? "..." : `$${stats.totalInventoryValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} color="#3B82F6" />
+                <StatCard title="Órdenes Este Mes" value={loadingStats ? "..." : stats.ordersThisMonth} color="#8B5CF6" />
             </div>
 
             <main className="bg-white p-6 md:p-8 rounded-lg shadow-md">
