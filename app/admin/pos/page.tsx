@@ -94,17 +94,40 @@ const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, 
 
     return (
         <div className="h-screen w-screen flex font-sans antialiased text-gray-900 overflow-hidden">
-            <div className="w-1/3 max-w-lg h-full flex-shrink-0 border-r border-gray-200">
+            {/* Carrito de Compras - Responsive sin anchos fijos */}
+            <div className="flex-shrink-0 w-full sm:w-2/5 min-w-0 max-w-2xl h-full border-r border-gray-200">
                 <PosCart items={cart} onUpdateQuantity={handleUpdateQuantity} onProcessSale={handleProcessSale} isProcessing={isProcessing} requiresInvoice={requiresInvoice} setRequiresInvoice={setRequiresInvoice} isSpecialOrder={isSpecialOrder} setIsSpecialOrder={setIsSpecialOrder} onOpenSpecialOrderModal={() => setSpecialOrderModalOpen(true)} />
             </div>
-            <div className="flex-1 h-full flex flex-col bg-gray-50">
-                <div className="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200"><input type="text" placeholder="Buscar por nombre o SKU..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full p-4 text-lg border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"/></div>
-                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            
+            {/* Selector de Productos - Se adapta al espacio restante */}
+            <div className="flex-1 min-w-0 h-full flex flex-col bg-gray-50">
+                <div className="flex-shrink-0 p-2 sm:p-4 bg-white sticky top-0 z-10 border-b border-gray-200 shadow-sm">
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por nombre o SKU..." 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)} 
+                        className="w-full p-2 sm:p-4 text-sm sm:text-lg border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 sm:p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
                     {filteredProducts.map(product => (
-                        <button key={product.sku_base} onClick={() => setSelectedProduct(product)} className="bg-white rounded-2xl shadow-md p-4 text-center flex flex-col justify-between items-center hover:ring-2 hover:ring-indigo-500 transition-all duration-200">
-                            <Image src={product.colors[0]?.image_url || '/placeholder.jpg'} alt={product.product_name} width={300} height={300} className="w-full h-32 object-cover rounded-lg mb-4" />
-                            <div className="flex-1"><p className="font-bold text-gray-800">{product.product_name}</p></div>
-                            <p className="mt-2 text-sm text-gray-500">{product.colors.length} colores</p>
+                        <button 
+                            key={product.sku_base} 
+                            onClick={() => setSelectedProduct(product)} 
+                            className="bg-white rounded-xl sm:rounded-2xl shadow-md p-2 sm:p-4 text-center flex flex-col justify-between items-center hover:ring-2 hover:ring-indigo-500 transition-all duration-200 hover:shadow-lg min-w-0"
+                        >
+                            <Image 
+                                src={product.colors[0]?.image_url || '/placeholder.jpg'} 
+                                alt={product.product_name} 
+                                width={300} 
+                                height={300} 
+                                className="w-full h-20 sm:h-32 object-cover rounded-lg mb-2 sm:mb-4" 
+                            />
+                            <div className="flex-1 min-w-0 w-full">
+                                <p className="font-bold text-gray-800 text-xs sm:text-sm truncate">{product.product_name}</p>
+                            </div>
+                            <p className="mt-1 sm:mt-2 text-xs text-gray-500">{product.colors.length} colores</p>
                         </button>
                     ))}
                 </div>
@@ -164,83 +187,231 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
     };
 
     return (
-        <div className="bg-white h-full flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-gray-200"><h2 className="text-2xl font-bold text-gray-900">Venta Actual</h2></div>
-            <ul className="flex-1 overflow-y-auto p-4 divide-y divide-gray-200">
+        <div className="bg-white h-full flex flex-col shadow-2xl min-w-0">
+            {/* Header del Carrito */}
+            <div className="flex-shrink-0 p-3 sm:p-4 lg:p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">Venta Actual</h2>
+                {items.length > 0 && (
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">{items.length} producto{items.length > 1 ? 's' : ''} en el carrito</p>
+                )}
+            </div>
+            
+            {/* Lista de Productos - Responsive */}
+            <ul className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-3 lg:p-4 divide-y divide-gray-100">
                 {items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center text-gray-400 h-full p-8"><ShoppingBagIcon className="h-20 w-20 mb-4"/><p className="font-medium">El carrito está vacío</p><p className="text-sm">Agrega productos</p></div>
+                    <div className="flex flex-col items-center justify-center text-center text-gray-400 h-full p-4 sm:p-8">
+                        <ShoppingBagIcon className="h-16 w-16 sm:h-20 sm:w-20 mb-4"/>
+                        <p className="font-medium text-base sm:text-lg">El carrito está vacío</p>
+                        <p className="text-xs sm:text-sm">Agrega productos escaneando códigos de barras</p>
+                    </div>
                 ) : (
                     items.map(item => (
-                        <li key={item.inventory_id} className="py-4 flex items-center space-x-4">
-                            <Image src={item.image_url || '/placeholder.jpg'} alt={item.product_name} width={64} height={64} className="w-16 h-16 object-cover rounded-lg bg-gray-200" />
-                            <div className="flex-1"><p className="font-semibold text-gray-800">{item.product_name}</p><p className="text-sm text-gray-600">{item.size} / {item.color}</p></div>
-                            <div className="flex items-center space-x-3">
-                                <button onClick={() => handleQuantityChange(item.inventory_id, -1)} className="p-2 rounded-full bg-gray-200 hover:bg-gray-300"><MinusIcon className="h-5 w-5" /></button>
-                                <span className="font-bold text-lg w-8 text-center">{item.quantity}</span>
-                                <button onClick={() => handleQuantityChange(item.inventory_id, 1)} className="p-2 rounded-full bg-gray-200 hover:bg-gray-300"><PlusIcon className="h-5 w-5" /></button>
+                        <li key={item.inventory_id} className="py-3 sm:py-4 lg:py-5">
+                            <div className="flex items-start gap-2 sm:gap-3 lg:gap-4 min-w-0">
+                                {/* Imagen del Producto - Responsive */}
+                                <div className="flex-shrink-0">
+                                    <Image 
+                                        src={item.image_url || '/placeholder.jpg'} 
+                                        alt={item.product_name} 
+                                        width={80} 
+                                        height={80} 
+                                        className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 object-cover rounded-lg bg-gray-200 shadow-sm" 
+                                    />
+                                </div>
+                                
+                                {/* Información del Producto - Se adapta al espacio */}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-900 text-sm sm:text-base lg:text-lg leading-tight truncate">
+                                        {item.product_name}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1 sm:gap-2 mt-1">
+                                        <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                            {item.size}
+                                        </span>
+                                        <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                            {item.color}
+                                        </span>
+                                    </div>
+                                    <div className="mt-1 sm:mt-2 space-y-0.5 sm:space-y-1">
+                                        <p className="text-sm sm:text-base lg:text-lg font-bold text-green-600">
+                                            ${item.price.toFixed(2)}
+                                        </p>
+                                        <p className="text-xs sm:text-sm text-gray-600">
+                                            Subtotal: ${(item.price * item.quantity).toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                {/* Controles de Cantidad - Compactos pero usables */}
+                                <div className="flex-shrink-0 flex flex-col items-center gap-1 sm:gap-2">
+                                    <div className="flex items-center gap-1 sm:gap-2">
+                                        <button 
+                                            onClick={() => handleQuantityChange(item.inventory_id, -1)} 
+                                            className="p-1.5 sm:p-2 lg:p-3 rounded-full bg-red-100 hover:bg-red-200 text-red-700 transition-colors"
+                                        >
+                                            <MinusIcon className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
+                                        </button>
+                                        <span className="font-bold text-base sm:text-lg lg:text-xl w-8 sm:w-10 lg:w-12 text-center bg-gray-50 rounded-lg py-1 sm:py-2 px-2 sm:px-3 border text-black">
+                                            {item.quantity}
+                                        </span>
+                                        <button 
+                                            onClick={() => handleQuantityChange(item.inventory_id, 1)} 
+                                            className="p-1.5 sm:p-2 lg:p-3 rounded-full bg-green-100 hover:bg-green-200 text-green-700 transition-colors"
+                                        >
+                                            <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 font-medium text-center">
+                                        Cantidad
+                                    </p>
+                                </div>
                             </div>
                         </li>
                     ))
                 )}
             </ul>
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <div className="space-y-4 mb-6">
-                    <button onClick={() => setRequiresInvoice(!requiresInvoice)} className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"><span className="font-semibold text-gray-800">¿Requiere Factura?</span><CheckboxIcon checked={requiresInvoice} /></button>
-                    <button onClick={handleSpecialOrderToggle} className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"><span className="font-semibold text-gray-800">¿Es Pedido Especial?</span><CheckboxIcon checked={isSpecialOrder} /></button>
-                    <button onClick={handleLayawayToggle} className="w-full flex items-center justify-between p-4 rounded-xl bg-blue-100 hover:bg-blue-200 transition-colors"><span className="font-semibold text-gray-800">¿Es Separado?</span><CheckboxIcon checked={isLayaway} /></button>
+            
+            {/* Sección de Totales y Controles - Responsive */}
+            <div className="flex-shrink-0 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 min-w-0">
+                {/* Opciones de Venta */}
+                <div className="p-2 sm:p-3 lg:p-4">
+                    <div className="grid grid-cols-3 gap-1 sm:gap-2">
+                        <button 
+                            onClick={() => setRequiresInvoice(!requiresInvoice)} 
+                            className="flex flex-col sm:flex-row items-center justify-center sm:justify-between p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm min-w-0"
+                        >
+                            <span className="font-medium text-gray-800 text-xs sm:text-sm truncate">Factura</span>
+                            <CheckboxIcon checked={requiresInvoice} />
+                        </button>
+                        <button 
+                            onClick={handleSpecialOrderToggle} 
+                            className="flex flex-col sm:flex-row items-center justify-center sm:justify-between p-2 sm:p-3 rounded-lg bg-white hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm min-w-0"
+                        >
+                            <span className="font-medium text-gray-800 text-xs sm:text-sm truncate">Especial</span>
+                            <CheckboxIcon checked={isSpecialOrder} />
+                        </button>
+                        <button 
+                            onClick={handleLayawayToggle} 
+                            className="flex flex-col sm:flex-row items-center justify-center sm:justify-between p-2 sm:p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm min-w-0"
+                        >
+                            <span className="font-medium text-blue-800 text-xs sm:text-sm truncate">Separado</span>
+                            <CheckboxIcon checked={isLayaway} />
+                        </button>
+                    </div>
                 </div>
-                <div className="space-y-3 text-lg">
-                    <div className="text-black flex justify-between font-medium"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                    <div className="text-black flex justify-between items-center"><label htmlFor="discount" className="font-medium">Descuento</label><input id="discount" type="number" value={discount} onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))} className="w-28 p-2 text-right font-bold border border-gray-300 rounded-lg"/></div>
-                    {requiresInvoice && <div className="flex justify-between text-gray-600"><span>IVA (16%)</span><span>${iva.toFixed(2)}</span></div>}
-                    <div className="flex justify-between text-2xl font-bold text-gray-900 border-t pt-3 mt-3"><span>TOTAL</span><span>${total.toFixed(2)}</span></div>
-                    
-                    {isLayaway && (
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
-                            <h4 className="font-semibold text-blue-900">Detalles del Separado</h4>
-                            <div className="flex justify-between items-center">
-                                <label htmlFor="downPayment" className="font-medium text-blue-800">Anticipo</label>
-                                <input 
-                                    id="downPayment" 
-                                    type="number" 
-                                    value={downPayment} 
-                                    onChange={(e) => handleDownPaymentChange(parseFloat(e.target.value) || 0)} 
-                                    className="w-28 p-2 text-right font-bold border border-blue-300 rounded-lg"
-                                    max={total}
-                                    min={0}
-                                    step="0.01"
-                                />
+
+                {/* Totales */}
+                <div className="px-2 sm:px-3 lg:px-4 pb-2 sm:pb-3 lg:pb-4">
+                    <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border">
+                        <div className="space-y-2 sm:space-y-3">
+                            <div className="flex justify-between items-center text-sm sm:text-base">
+                                <span className="font-medium text-gray-700">Subtotal</span>
+                                <span className="font-semibold text-gray-900">${subtotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-blue-800">
+                            
+                            <div className="flex justify-between items-center">
+                                <label htmlFor="discount" className="font-medium text-gray-700 text-sm sm:text-base">Descuento</label>
+                                <div className="flex items-center space-x-1 sm:space-x-2">
+                                    <span className="text-gray-500 text-sm">$</span>
+                                    <input 
+                                        id="discount" 
+                                        type="number" 
+                                        value={discount} 
+                                        onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))} 
+                                        className="text-black w-16 sm:w-20 p-1.5 sm:p-2 text-right font-semibold border border-gray-300 rounded-md text-xs sm:text-sm"
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </div>
+                            </div>
+                            
+                            {requiresInvoice && (
+                                <div className="flex justify-between text-gray-600 text-sm sm:text-base">
+                                    <span>IVA (16%)</span>
+                                    <span className="font-medium">${iva.toFixed(2)}</span>
+                                </div>
+                            )}
+                            
+                            <div className="border-t pt-2 sm:pt-3 mt-2 sm:mt-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-lg sm:text-xl font-bold text-gray-900">TOTAL</span>
+                                    <span className="text-xl sm:text-2xl font-bold text-indigo-600">${total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Detalles del Separado */}
+                {isLayaway && (
+                    <div className="px-2 sm:px-3 lg:px-4 pb-2 sm:pb-3 lg:pb-4">
+                        <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200 space-y-2 sm:space-y-3">
+                            <h4 className="font-semibold text-blue-900 flex items-center text-sm sm:text-base">
+                                💳 Detalles del Separado
+                            </h4>
+                            <div className="flex justify-between items-center">
+                                <label htmlFor="downPayment" className="font-medium text-blue-800 text-sm">Anticipo</label>
+                                <div className="flex items-center space-x-1 sm:space-x-2">
+                                    <span className="text-blue-600 text-sm">$</span>
+                                    <input 
+                                        id="downPayment" 
+                                        type="number" 
+                                        value={downPayment} 
+                                        onChange={(e) => handleDownPaymentChange(parseFloat(e.target.value) || 0)} 
+                                        className="w-20 sm:w-24 p-1.5 sm:p-2 text-right font-bold border border-blue-300 rounded-md text-xs sm:text-sm"
+                                        max={total}
+                                        min={0}
+                                        step="0.01"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-between text-blue-800 text-sm">
                                 <span>Saldo Pendiente:</span>
                                 <span className="font-bold">${remainingBalance.toFixed(2)}</span>
                             </div>
                             {downPayment <= 0 && (
-                                <p className="text-red-600 text-sm font-medium">⚠️ El anticipo debe ser mayor a $0</p>
+                                <p className="text-red-600 text-xs sm:text-sm font-medium flex items-center">
+                                    <span className="mr-1">⚠️</span> El anticipo debe ser mayor a $0
+                                </p>
                             )}
                             {downPayment >= total && (
-                                <p className="text-green-600 text-sm font-medium">✅ Pago completo</p>
+                                <p className="text-green-600 text-xs sm:text-sm font-medium flex items-center">
+                                    <span className="mr-1">✅</span> Pago completo
+                                </p>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Botones de Pago */}
+                <div className="p-2 sm:p-3 lg:p-4">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                        <button 
+                            onClick={() => onProcessSale('Efectivo', discount, total, isLayaway, downPayment)} 
+                            disabled={isProcessing || items.length === 0 || (isLayaway && downPayment <= 0)} 
+                            className="w-full p-3 sm:p-4 text-sm sm:text-base lg:text-lg font-bold text-white bg-green-600 rounded-xl shadow-md hover:bg-green-700 disabled:bg-gray-400 transition-colors flex items-center justify-center space-x-1 sm:space-x-2 min-w-0"
+                        >
+                            <span>💵</span>
+                            <span className="truncate">Efectivo</span>
+                        </button>
+                        <button 
+                            onClick={() => onProcessSale('Tarjeta', discount, total, isLayaway, downPayment)} 
+                            disabled={isProcessing || items.length === 0 || (isLayaway && downPayment <= 0)} 
+                            className="w-full p-3 sm:p-4 text-sm sm:text-base lg:text-lg font-bold text-white bg-blue-600 rounded-xl shadow-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center justify-center space-x-1 sm:space-x-2 min-w-0"
+                        >
+                            <span>💳</span>
+                            <span className="truncate">Tarjeta</span>
+                        </button>
+                    </div>
+                    {isProcessing && (
+                        <div className="mt-3 sm:mt-4 text-center">
+                            <div className="inline-flex items-center space-x-2 text-gray-800 font-medium text-sm sm:text-base">
+                                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-indigo-600"></div>
+                                <span>Procesando venta...</span>
+                            </div>
                         </div>
                     )}
                 </div>
-                <div className="mt-6 grid grid-cols-2 gap-4">
-                    <button 
-                        onClick={() => onProcessSale('Efectivo', discount, total, isLayaway, downPayment)} 
-                        disabled={isProcessing || items.length === 0 || (isLayaway && downPayment <= 0)} 
-                        className="w-full p-4 text-lg font-bold text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700 disabled:bg-gray-400"
-                    >
-                        Efectivo
-                    </button>
-                    <button 
-                        onClick={() => onProcessSale('Tarjeta', discount, total, isLayaway, downPayment)} 
-                        disabled={isProcessing || items.length === 0 || (isLayaway && downPayment <= 0)} 
-                        className="w-full p-4 text-lg font-bold text-white bg-indigo-500 rounded-xl shadow-md hover:bg-indigo-600 disabled:bg-gray-400"
-                    >
-                        Tarjeta
-                    </button>
-                </div>
-                {isProcessing && <p className="text-center mt-4 text-gray-800 font-medium">Procesando venta...</p>}
             </div>
         </div>
     );
@@ -352,22 +523,39 @@ const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAd
     };
 
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-gray-100 font-sans">
-            <div className="w-full md:w-1/3 bg-white p-6 shadow-lg flex flex-col">
+        <div className="flex flex-col lg:flex-row h-screen bg-gray-100 font-sans overflow-hidden">
+            {/* Carrito de Compras - Responsive y sin scroll horizontal */}
+            <div className="w-full lg:flex-shrink-0 lg:w-3/5 bg-white shadow-lg flex flex-col min-w-0">
                 <PosCart items={cart} onUpdateQuantity={handleUpdateQuantity} onProcessSale={handleProcessSale} isProcessing={isProcessing} requiresInvoice={requiresInvoice} setRequiresInvoice={setRequiresInvoice} isSpecialOrder={isSpecialOrder} setIsSpecialOrder={setIsSpecialOrder} onOpenSpecialOrderModal={() => setSpecialOrderModalOpen(true)} />
             </div>
-            <div className="w-full md:w-2/3 p-8">
-                <div className="max-w-xl mx-auto">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Punto de Venta</h1>
-                    <p className="text-gray-700 mb-8 font-medium">Escanee un código de barras para añadirlo a la venta.</p>
-                    <form onSubmit={handleSearchSubmit} className='mb-8'>
+            
+            {/* Scanner/Búsqueda - Se adapta al espacio restante */}
+            <div className="w-full lg:flex-1 min-w-0 p-4 lg:p-6 flex flex-col justify-center">
+                <div className="max-w-md mx-auto w-full">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Punto de Venta</h1>
+                    <p className="text-sm sm:text-base text-gray-700 mb-4 lg:mb-6 font-medium">Escanee un código de barras para añadirlo a la venta.</p>
+                    <form onSubmit={handleSearchSubmit} className='mb-4 lg:mb-6'>
                         <div className="relative">
-                            <input ref={barcodeInputRef} type="text" name="barcode" placeholder="Esperando código de barras..." className="text-gray-600 w-full pl-4 pr-16 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={isBarcodeProcessing} autoComplete="off" />
-                            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-indigo-600" disabled={isBarcodeProcessing}><SearchIcon className="h-7 w-7" /></button>
+                            <input 
+                                ref={barcodeInputRef} 
+                                type="text" 
+                                name="barcode" 
+                                placeholder="Esperando código de barras..." 
+                                className="text-gray-600 w-full pl-4 pr-12 sm:pr-16 py-3 sm:py-4 text-base sm:text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                                disabled={isBarcodeProcessing} 
+                                autoComplete="off" 
+                            />
+                            <button 
+                                type="submit" 
+                                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-indigo-600" 
+                                disabled={isBarcodeProcessing}
+                            >
+                                <SearchIcon className="h-5 w-5 sm:h-7 sm:w-7" />
+                            </button>
                         </div>
                     </form>
-                    {isBarcodeProcessing && <p className="text-center mt-4 text-gray-800 font-medium">Buscando...</p>}
-                    {error && <p className="text-center mt-4 text-red-700 font-semibold bg-red-100 p-4 rounded-lg border border-red-200">{error}</p>}
+                    {isBarcodeProcessing && <p className="text-center mt-4 text-gray-800 font-medium text-sm sm:text-base">Buscando...</p>}
+                    {error && <p className="text-center mt-4 text-red-700 font-semibold bg-red-100 p-3 sm:p-4 rounded-lg border border-red-200 text-sm sm:text-base">{error}</p>}
                 </div>
             </div>
             <SpecialOrderModal isOpen={isSpecialOrderModalOpen} onClose={() => setSpecialOrderModalOpen(false)} onSave={setSpecialOrderDetails} schools={schools} />
@@ -400,10 +588,14 @@ export default function PosPage() {
     // --- Detección de Dispositivo ---
     useEffect(() => {
         const checkDeviceType = () => {
-            if (window.innerWidth < 1400) { // Umbral para tablets
-                setViewMode('tablet');
-            } else {
+            // Cambiamos el threshold para ser más responsive
+            const width = window.innerWidth;
+            
+            // Si es muy ancho (desktop) o pantalla muy pequeña, usar desktop view que es más responsive
+            if (width >= 1200 || width < 768) {
                 setViewMode('desktop');
+            } else {
+                setViewMode('tablet');
             }
         };
         checkDeviceType();
