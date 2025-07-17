@@ -358,7 +358,7 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
                                         type="number" 
                                         value={downPayment} 
                                         onChange={(e) => handleDownPaymentChange(parseFloat(e.target.value) || 0)} 
-                                        className="w-20 sm:w-24 p-1.5 sm:p-2 text-right font-bold border border-blue-300 rounded-md text-xs sm:text-sm"
+                                        className="text-black w-20 sm:w-24 p-1.5 sm:p-2 text-right font-bold border border-blue-300 rounded-md text-xs sm:text-sm"
                                         max={total}
                                         min={0}
                                         step="0.01"
