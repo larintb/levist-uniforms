@@ -1,9 +1,11 @@
 // @/app/admin/pos/page.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo, useTransition, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useTransition, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getGroupedProducts, processSaleAction, SalePayload, GroupedProduct, ProductColorVariant, ProductVariant, getSchools, findProductByBarcode } from './actions';
+import { updateOrderMultipleStatuses } from '../orders/multiple-status-actions';
+import { updateAllItemsDeliveryStatus, updateItemDeliveryByInventoryId } from '../orders/actions';
 import Image from 'next/image';
 
 // --- Tipos de Datos ---
@@ -28,6 +30,31 @@ type SpecialOrderDetails = {
     customerPhone?: string;
     schoolId?: string | null;
     embroideryNotes?: string;
+};
+
+export interface PosCartRef {
+    resetLayaway: () => void;
+}
+
+// Componente para mostrar badges de estado
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+    const getStatusStyles = (status: string) => {
+        switch (status) {
+            case 'PENDING_PAYMENT': return 'bg-red-100 text-red-800';
+            case 'PENDING_SUPPLIER': return 'bg-orange-100 text-orange-800';
+            case 'PENDING_EMBROIDERY': return 'bg-purple-100 text-purple-800';
+            case 'READY_FOR_PICKUP': return 'bg-blue-100 text-blue-800';
+            case 'DELIVERED': return 'bg-green-100 text-green-800';
+            case 'COMPLETED': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    return (
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusStyles(status)}`}>
+            {status.replace('_', ' ')}
+        </span>
+    );
 };
 
 // --- Iconos ---
@@ -64,7 +91,8 @@ interface PosViewProps {
     setRequiresInvoice: React.Dispatch<React.SetStateAction<boolean>>;
     isSpecialOrder: boolean;
     setIsSpecialOrder: React.Dispatch<React.SetStateAction<boolean>>;
-    setSpecialOrderDetails: React.Dispatch<React.SetStateAction<SpecialOrderDetails>>;
+    handleSpecialOrderDetailsSave: (details: SpecialOrderDetails) => void;
+    hasPendingPayment: boolean;
     error: string | null;
     setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -81,11 +109,12 @@ type DesktopPosViewProps = PosViewProps;
 // ############# VISTA PARA TABLET/IPAD (NUEVO DISEÑO) #####################
 // #########################################################################
 
-const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, handleAddToCart, handleUpdateQuantity, handleProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, setSpecialOrderDetails, error }) => {
+const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, handleAddToCart, handleUpdateQuantity, handleProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, handleSpecialOrderDetailsSave, hasPendingPayment, error }) => {
     const [selectedProduct, setSelectedProduct] = useState<GroupedProduct | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredProducts, setFilteredProducts] = useState<GroupedProduct[]>(products);
     const [isSpecialOrderModalOpen, setSpecialOrderModalOpen] = useState(false);
+    const posCartRef = useRef<PosCartRef>(null);
 
     useEffect(() => {
         const result = products.filter(p => p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku_base.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -96,7 +125,18 @@ const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, 
         <div className="h-screen w-screen flex font-sans antialiased text-gray-900 overflow-hidden">
             {/* Carrito de Compras - Responsive sin anchos fijos */}
             <div className="flex-shrink-0 w-full sm:w-2/5 min-w-0 max-w-2xl h-full border-r border-gray-200">
-                <PosCart items={cart} onUpdateQuantity={handleUpdateQuantity} onProcessSale={handleProcessSale} isProcessing={isProcessing} requiresInvoice={requiresInvoice} setRequiresInvoice={setRequiresInvoice} isSpecialOrder={isSpecialOrder} setIsSpecialOrder={setIsSpecialOrder} onOpenSpecialOrderModal={() => setSpecialOrderModalOpen(true)} />
+                <PosCart 
+                    ref={posCartRef}
+                    items={cart} 
+                    onUpdateQuantity={handleUpdateQuantity} 
+                    onProcessSale={handleProcessSale} 
+                    isProcessing={isProcessing} 
+                    requiresInvoice={requiresInvoice} 
+                    setRequiresInvoice={setRequiresInvoice} 
+                    isSpecialOrder={isSpecialOrder} 
+                    setIsSpecialOrder={setIsSpecialOrder} 
+                    onOpenSpecialOrderModal={() => setSpecialOrderModalOpen(true)} 
+                />
             </div>
             
             {/* Selector de Productos - Se adapta al espacio restante */}
@@ -133,14 +173,48 @@ const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, 
                 </div>
             </div>
             {selectedProduct && <VariantSelectionModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={handleAddToCart} />}
-            <SpecialOrderModal isOpen={isSpecialOrderModalOpen} onClose={() => setSpecialOrderModalOpen(false)} onSave={setSpecialOrderDetails} schools={schools} />
+            <SpecialOrderModal 
+                isOpen={isSpecialOrderModalOpen} 
+                onClose={() => {
+                    setSpecialOrderModalOpen(false);
+                    // NO resetear isSpecialOrder ni layaway aquí, solo cerrar el modal
+                }} 
+                onCancel={() => {
+                    // Cuando se cancela, deseleccionar las opciones
+                    setIsSpecialOrder(false);
+                    posCartRef.current?.resetLayaway();
+                }}
+                onSave={handleSpecialOrderDetailsSave} 
+                schools={schools}
+                hasPendingPayment={hasPendingPayment}
+            />
             {error && <div className="absolute bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50"><strong className="font-bold">Error: </strong><span className="block sm:inline">{error}</span></div>}
         </div>
     );
 };
 
 // --- Componente: Carrito de Compra (Compartido) ---
-const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, onOpenSpecialOrderModal }: { items: CartItem[], onUpdateQuantity: (inventoryId: string, newQuantity: number) => void, onProcessSale: (paymentMethod: string, discount: number, total: number, isLayaway?: boolean, downPayment?: number) => void, isProcessing: boolean, requiresInvoice: boolean, setRequiresInvoice: (value: boolean) => void, isSpecialOrder: boolean, setIsSpecialOrder: (value: boolean) => void, onOpenSpecialOrderModal: () => void }) => {
+const PosCart = forwardRef<PosCartRef, { 
+    items: CartItem[], 
+    onUpdateQuantity: (inventoryId: string, newQuantity: number) => void, 
+    onProcessSale: (paymentMethod: string, discount: number, total: number, isLayaway?: boolean, downPayment?: number) => void, 
+    isProcessing: boolean, 
+    requiresInvoice: boolean, 
+    setRequiresInvoice: (value: boolean) => void, 
+    isSpecialOrder: boolean, 
+    setIsSpecialOrder: (value: boolean) => void, 
+    onOpenSpecialOrderModal: () => void
+}>(({ 
+    items, 
+    onUpdateQuantity, 
+    onProcessSale, 
+    isProcessing, 
+    requiresInvoice, 
+    setRequiresInvoice, 
+    isSpecialOrder, 
+    setIsSpecialOrder, 
+    onOpenSpecialOrderModal
+}, ref) => {
     const [discount, setDiscount] = useState(0);
     const [isLayaway, setIsLayaway] = useState(false);
     const [downPayment, setDownPayment] = useState(0);
@@ -161,8 +235,10 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
         const newIsSpecialOrder = !isSpecialOrder;
         setIsSpecialOrder(newIsSpecialOrder);
         if (newIsSpecialOrder) {
+            // Solo abrir el modal si no hay detalles guardados
             onOpenSpecialOrderModal();
         }
+        // Si se desactiva "Especial", mantener los detalles pero no forzar el modal
     };
 
     const handleLayawayToggle = () => {
@@ -185,6 +261,14 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
         const clampedValue = Math.max(0, Math.min(value, total));
         setDownPayment(clampedValue);
     };
+
+    // Exponer funciones al componente padre através del ref
+    useImperativeHandle(ref, () => ({
+        resetLayaway: () => {
+            setIsLayaway(false);
+            setDownPayment(0);
+        }
+    }));
 
     return (
         <div className="bg-white h-full flex flex-col shadow-2xl min-w-0">
@@ -415,7 +499,9 @@ const PosCart = ({ items, onUpdateQuantity, onProcessSale, isProcessing, require
             </div>
         </div>
     );
-};
+});
+
+PosCart.displayName = 'PosCart';
 
 // --- Componente: Modal de Selección de Variantes (Compartido) ---
 const VariantSelectionModal = ({ product, onClose, onAddToCart }: { product: GroupedProduct, onClose: () => void, onAddToCart: (item: CartItem) => void }) => {
@@ -438,8 +524,8 @@ const VariantSelectionModal = ({ product, onClose, onAddToCart }: { product: Gro
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl p-8 m-4 max-w-md w-full" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+            <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-300 p-8 m-4 max-w-md w-full" onClick={e => e.stopPropagation()}>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">{product.product_name}</h2>
                 <div className="mb-6"><h3 className="text-lg font-semibold text-gray-800 mb-3">Color</h3><div className="flex flex-wrap gap-3">{product.colors.map(color => (<button key={color.color} onClick={() => setSelectedColor(color)} className={`p-2 rounded-lg border-2 transition-all ${selectedColor?.color === color.color ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-gray-200'}`}><Image src={color.image_url || '/placeholder.jpg'} alt={color.color} width={80} height={80} className="w-20 h-20 object-cover rounded-md" /><p className="text-sm font-medium mt-1 text-center">{color.color}</p></button>))}</div></div>
                 {selectedColor && <div className="mb-8"><h3 className="text-lg font-semibold text-gray-800 mb-3">Talla</h3><div className="flex flex-wrap gap-3">{selectedColor.variants.map(variant => (<button key={variant.inventory_id} onClick={() => setSelectedVariant(variant)} className={`px-6 py-3 rounded-full text-base font-bold transition-colors ${selectedVariant?.inventory_id === variant.inventory_id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>{variant.size}</button>))}</div></div>}
@@ -450,7 +536,14 @@ const VariantSelectionModal = ({ product, onClose, onAddToCart }: { product: Gro
 };
 
 // --- Componente: Modal de Pedido Especial (Compartido) ---
-const SpecialOrderModal = ({ isOpen, onClose, onSave, schools }: { isOpen: boolean, onClose: () => void, onSave: (details: SpecialOrderDetails) => void, schools: School[] }) => {
+const SpecialOrderModal = ({ isOpen, onClose, onSave, onCancel, schools, hasPendingPayment }: { 
+    isOpen: boolean, 
+    onClose: () => void, 
+    onSave: (details: SpecialOrderDetails) => void, 
+    onCancel?: () => void,
+    schools: School[], 
+    hasPendingPayment?: boolean 
+}) => {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [schoolId, setSchoolId] = useState<string | null>(null);
@@ -459,21 +552,52 @@ const SpecialOrderModal = ({ isOpen, onClose, onSave, schools }: { isOpen: boole
     if (!isOpen) return null;
 
     const handleSave = () => {
+        console.log('💾 Usuario guardó detalles especiales - manteniendo opciones seleccionadas');
         onSave({ customerName, customerPhone, schoolId, embroideryNotes });
         onClose();
     };
 
+    const handleCancel = () => {
+        console.log('❌ Usuario canceló detalles especiales - deseleccionando opciones');
+        // Llamar a onCancel si existe (para deseleccionar opciones)
+        if (onCancel) {
+            onCancel();
+        }
+        onClose();
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-lg md:max-w-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={handleCancel}>
+            <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-300 p-6 md:p-8 w-full max-w-lg md:max-w-2xl" onClick={e => e.stopPropagation()}>
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Detalles del Pedido Especial</h2>
+                
+                {hasPendingPayment && (
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-blue-800">
+                                    Continuarás con la configuración de estados
+                                </h3>
+                                <div className="mt-2 text-sm text-blue-700">
+                                    <p>Después de guardar estos detalles, se abrirá automáticamente el modal para configurar los estados de la orden.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-5">
                     <div><label htmlFor="customerName" className="block text-sm md:text-base font-semibold text-gray-700 mb-1">Nombre Completo del Cliente*</label><input type="text" id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="text-gray-700 w-full p-3 text-base border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej. Juan Pérez"/></div>
                     <div><label htmlFor="customerPhone" className="block text-sm md:text-base font-semibold text-gray-700 mb-1">Teléfono de Contacto</label><input type="tel" id="customerPhone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="text-gray-700 w-full p-3 text-base border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej. 868-123-4567"/></div>
                     <div><label htmlFor="schoolId" className="block text-sm md:text-base font-semibold text-gray-700 mb-1">Escuela (Opcional)</label><select id="schoolId" value={schoolId ?? ''} onChange={(e) => setSchoolId(e.target.value || null)} className="text-gray-700 w-full p-3 text-base border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white"><option value="">Ninguna</option>{schools.map(school => (<option key={school.id} value={school.id}>{school.name}</option>))}</select></div>
                     <div><label htmlFor="embroideryNotes" className="block text-sm md:text-base font-semibold text-gray-700 mb-1">Notas de Bordado / Pedido</label><textarea id="embroideryNotes" rows={4} value={embroideryNotes} onChange={(e) => setEmbroideryNotes(e.target.value)} className="text-gray-700 w-full p-3 text-base border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej. Bordar 'Dr. Juan Pérez' en la filipina."></textarea></div>
                 </div>
-                <div className="mt-8 flex justify-end gap-4"><button onClick={onClose} className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold text-base">Cancelar</button><button onClick={handleSave} className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-base">Guardar Detalles</button></div>
+                <div className="mt-8 flex justify-end gap-4"><button onClick={handleCancel} className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-semibold text-base">Cancelar</button><button onClick={handleSave} className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-base">Guardar Detalles</button></div>
             </div>
         </div>
     );
@@ -484,9 +608,10 @@ const SpecialOrderModal = ({ isOpen, onClose, onSave, schools }: { isOpen: boole
 // ############# VISTA PARA DESKTOP (DISEÑO ORIGINAL) ######################
 // #########################################################################
 
-const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAddToCart, handleUpdateQuantity, handleProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, setSpecialOrderDetails, error, setError }) => {
+const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAddToCart, handleUpdateQuantity, handleProcessSale, isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder, handleSpecialOrderDetailsSave, hasPendingPayment, error, setError }) => {
     const [isSpecialOrderModalOpen, setSpecialOrderModalOpen] = useState(false);
     const barcodeInputRef = useRef<HTMLInputElement>(null);
+    const posCartRef = useRef<PosCartRef>(null);
     const [isBarcodeProcessing, startBarcodeTransition] = useTransition();
 
     const focusBarcodeInput = () => {
@@ -526,7 +651,18 @@ const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAd
         <div className="flex flex-col lg:flex-row h-screen bg-gray-100 font-sans overflow-hidden">
             {/* Carrito de Compras - Responsive y sin scroll horizontal */}
             <div className="w-full lg:flex-shrink-0 lg:w-3/5 bg-white shadow-lg flex flex-col min-w-0">
-                <PosCart items={cart} onUpdateQuantity={handleUpdateQuantity} onProcessSale={handleProcessSale} isProcessing={isProcessing} requiresInvoice={requiresInvoice} setRequiresInvoice={setRequiresInvoice} isSpecialOrder={isSpecialOrder} setIsSpecialOrder={setIsSpecialOrder} onOpenSpecialOrderModal={() => setSpecialOrderModalOpen(true)} />
+                <PosCart 
+                    ref={posCartRef}
+                    items={cart} 
+                    onUpdateQuantity={handleUpdateQuantity} 
+                    onProcessSale={handleProcessSale} 
+                    isProcessing={isProcessing} 
+                    requiresInvoice={requiresInvoice} 
+                    setRequiresInvoice={setRequiresInvoice} 
+                    isSpecialOrder={isSpecialOrder} 
+                    setIsSpecialOrder={setIsSpecialOrder} 
+                    onOpenSpecialOrderModal={() => setSpecialOrderModalOpen(true)} 
+                />
             </div>
             
             {/* Scanner/Búsqueda - Se adapta al espacio restante */}
@@ -558,7 +694,21 @@ const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAd
                     {error && <p className="text-center mt-4 text-red-700 font-semibold bg-red-100 p-3 sm:p-4 rounded-lg border border-red-200 text-sm sm:text-base">{error}</p>}
                 </div>
             </div>
-            <SpecialOrderModal isOpen={isSpecialOrderModalOpen} onClose={() => setSpecialOrderModalOpen(false)} onSave={setSpecialOrderDetails} schools={schools} />
+            <SpecialOrderModal 
+                isOpen={isSpecialOrderModalOpen} 
+                onClose={() => {
+                    setSpecialOrderModalOpen(false);
+                    // NO resetear isSpecialOrder ni layaway aquí, solo cerrar el modal
+                }} 
+                onCancel={() => {
+                    // Cuando se cancela, deseleccionar las opciones
+                    setIsSpecialOrder(false);
+                    posCartRef.current?.resetLayaway();
+                }}
+                onSave={handleSpecialOrderDetailsSave} 
+                schools={schools}
+                hasPendingPayment={hasPendingPayment}
+            />
         </div>
     );
 };
@@ -570,6 +720,7 @@ const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAd
 
 export default function PosPage() {
     const [viewMode, setViewMode] = useState<'loading' | 'desktop' | 'tablet'>('loading');
+    const [isHydrated, setIsHydrated] = useState(false);
     
     // --- Estado Compartido ---
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -580,13 +731,196 @@ export default function PosPage() {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
     
+    // --- Estados para Modal de Estados Múltiples (SIMPLIFICADO) ---
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+    const [pendingPaymentData, setPendingPaymentData] = useState<{
+        paymentMethod: string;
+        discount: number;
+        total: number;
+        isLayaway: boolean;
+        downPayment: number;
+    } | null>(null);
+    
+    // --- Estados para Selección de Items Entregados ---
+    const [deliveredItems, setDeliveredItems] = useState<string[]>([]);
+    
+    // --- Estados Disponibles ---
+    const availableStatuses = [
+        { key: 'PENDING_PAYMENT', label: 'Pago Pendiente', description: 'Cliente debe completar el pago' },
+        { key: 'PENDING_SUPPLIER', label: 'Pendiente Proveedor', description: 'Esperando productos del proveedor' },
+        { key: 'PENDING_EMBROIDERY', label: 'Pendiente Bordado', description: 'Requiere trabajo de bordado' },
+        { key: 'READY_FOR_PICKUP', label: 'Listo para Entrega', description: 'Orden lista para entregar al cliente' },
+        { key: 'DELIVERED', label: 'Entregado', description: 'Orden entregada al cliente' },
+        { key: 'COMPLETED', label: 'Completado', description: 'Proceso finalizado completamente' },
+    ];
+
+    // --- Funciones del Modal de Estados ---
+    const handleStatusToggle = (statusKey: string) => {
+        setSelectedStatuses(prev => {
+            if (prev.includes(statusKey)) {
+                return prev.filter(s => s !== statusKey);
+            } else {
+                return [...prev, statusKey];
+            }
+        });
+    };
+
+    const handleConfirmStatusesAndProcess = () => {
+        console.log('✅ Confirmando estados y procesando...');
+        
+        if (!pendingPaymentData) return;
+        
+        const statusesToApply = selectedStatuses.length > 0 ? selectedStatuses : ['COMPLETED'];
+        
+        // Procesar venta directamente con los estados seleccionados y items entregados
+        actuallyProcessSaleWithItemDelivery(
+            pendingPaymentData.paymentMethod,
+            pendingPaymentData.discount,
+            pendingPaymentData.total,
+            pendingPaymentData.isLayaway,
+            pendingPaymentData.downPayment,
+            statusesToApply,
+            deliveredItems
+        );
+        
+        setShowStatusModal(false);
+        setPendingPaymentData(null);
+        setSelectedStatuses([]);
+        setDeliveredItems([]);
+    };
+
+    const actuallyProcessSaleWithItemDelivery = (
+        paymentMethod: string, 
+        discount: number, 
+        total: number, 
+        isLayaway: boolean = false, 
+        downPayment: number = 0, 
+        statusesToApply: string[] = ['COMPLETED'],
+        itemsToDeliver: string[] = []
+    ) => {
+        startTransition(async () => {
+            setError(null);
+            
+            const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+            const remainingBalance = isLayaway ? total - downPayment : 0;
+            
+            const payload: SalePayload = {
+                cartItems: cart.map(item => ({ inventory_id: item.inventory_id, quantity: item.quantity, price_at_sale: item.price })),
+                paymentMethod, 
+                subtotal, 
+                discountAmount: discount, 
+                discountReason: discount > 0 ? 'Descuento en POS' : '', 
+                total, 
+                requiresInvoice,
+                specialOrderData: { isSpecialOrder, ...specialOrderDetails },
+                isLayaway,
+                downPayment,
+                remainingBalance
+            };
+            
+            const result = await processSaleAction(payload);
+            console.log('📋 Resultado venta:', result.success ? 'ÉXITO' : 'ERROR');
+            
+            if (result.success && result.orderId) {
+                // Aplicar los estados seleccionados a la orden creada
+                if (statusesToApply.length > 0) {
+                    await updateOrderMultipleStatuses(result.orderId, statusesToApply, 'pos_user');
+                    console.log('🎯 Estados aplicados:', statusesToApply.join(', '));
+                }
+                
+                // Actualizar el estado de entrega de los items
+                if (itemsToDeliver.length > 0) {
+                    try {
+                        // Marcar todos como no entregados primero
+                        await updateAllItemsDeliveryStatus(result.orderId, false);
+                        
+                        // Luego marcar los seleccionados como entregados
+                        for (const inventoryId of itemsToDeliver) {
+                            await updateItemDeliveryByInventoryId(result.orderId, inventoryId, true);
+                        }
+                        
+                        console.log(`📦 Items marcados como entregados: ${itemsToDeliver.length}/${cart.length}`);
+                    } catch (error) {
+                        console.error('Error updating item delivery:', error);
+                        setError('Error al actualizar el estado de entrega de los items');
+                        return;
+                    }
+                }
+                
+                // Limpiar estados y redirigir
+                setCart([]);
+                setIsSpecialOrder(false);
+                setRequiresInvoice(false);
+                setSpecialOrderDetails({});
+                
+                router.push(`/admin/orders/${result.orderId}`);
+            } else {
+                setError(result.message || "Ocurrió un error al procesar la venta.");
+            }
+        });
+    };
+
+    // --- Funciones para Items Entregados ---
+    const handleItemDeliveryToggle = (inventoryId: string) => {
+        setDeliveredItems(prev => {
+            if (prev.includes(inventoryId)) {
+                return prev.filter(id => id !== inventoryId);
+            } else {
+                return [...prev, inventoryId];
+            }
+        });
+    };
+
+    const handleSelectAllItems = () => {
+        const allItemIds = cart.map(item => item.inventory_id);
+        setDeliveredItems(allItemIds);
+    };
+
+    const handleDeselectAllItems = () => {
+        setDeliveredItems([]);
+    };
+
+    const handleSpecialOrderDetailsSave = (details: SpecialOrderDetails) => {
+        console.log('💾 Guardando detalles especiales:', details.customerName);
+        setSpecialOrderDetails(details);
+        
+        // Si hay un pago pendiente, inmediatamente volver a mostrar el modal de estados
+        if (pendingPaymentData) {
+            console.log('🔄 Reabriendo modal de estados...');
+            // Pequeño delay para permitir que el modal de detalles se cierre primero
+            setTimeout(() => {
+                const defaultStatuses = [];
+                if (pendingPaymentData.isLayaway) {
+                    defaultStatuses.push('PENDING_PAYMENT');
+                }
+                if (details.embroideryNotes) {
+                    defaultStatuses.push('PENDING_EMBROIDERY');
+                }
+                if (defaultStatuses.length === 0) {
+                    defaultStatuses.push('COMPLETED');
+                }
+                
+                setSelectedStatuses(defaultStatuses);
+                setShowStatusModal(true);
+            }, 100);
+        }
+    };
+    
     // State para Pedidos Especiales y Facturas
     const [requiresInvoice, setRequiresInvoice] = useState(false);
     const [isSpecialOrder, setIsSpecialOrder] = useState(false);
     const [specialOrderDetails, setSpecialOrderDetails] = useState<SpecialOrderDetails>({});
 
+    // --- Hidratación del Cliente ---
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+
     // --- Detección de Dispositivo ---
     useEffect(() => {
+        if (!isHydrated) return;
+        
         const checkDeviceType = () => {
             // Cambiamos el threshold para ser más responsive
             const width = window.innerWidth;
@@ -601,22 +935,33 @@ export default function PosPage() {
         checkDeviceType();
         window.addEventListener('resize', checkDeviceType);
         return () => window.removeEventListener('resize', checkDeviceType);
-    }, []);
+    }, [isHydrated]);
 
     // --- Carga de Datos Inicial ---
     useEffect(() => {
+        if (!isHydrated) return;
+        
         const fetchInitialData = async () => {
             setIsLoading(true);
-            const productData = await getGroupedProducts();
-            setProducts(productData);
-            const schoolData = await getSchools();
-            setSchools(schoolData);
-            setIsLoading(false);
+            try {
+                const productData = await getGroupedProducts();
+                setProducts(productData);
+                const schoolData = await getSchools();
+                setSchools(schoolData);
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+                setError('Error cargando datos iniciales');
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchInitialData();
-    }, []);
+    }, [isHydrated]);
 
     // --- Handlers Compartidos ---
+    // --- UseEffect para manejar la reapertura automática del modal ---
+    // REMOVIDO: Usando enfoque más simple con setTimeout
+
     const handleAddToCart = (itemToAdd: CartItem) => {
         setCart(currentCart => {
             const existingItem = currentCart.find(item => item.inventory_id === itemToAdd.inventory_id);
@@ -631,51 +976,404 @@ export default function PosPage() {
     };
 
     const handleProcessSale = (paymentMethod: string, discount: number, total: number, isLayaway: boolean = false, downPayment: number = 0) => {
-        startTransition(async () => {
-            setError(null);
-            if (cart.length === 0) { setError("El carrito está vacío."); return; }
-            if (isSpecialOrder && !specialOrderDetails.customerName) { setError("El nombre del cliente es obligatorio para pedidos especiales."); return; }
-            if (isLayaway && downPayment <= 0) { setError("El anticipo debe ser mayor a $0 para separados."); return; }
-            if (isLayaway && downPayment > total) { setError("El anticipo no puede ser mayor al total."); return; }
-            
-            const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-            const remainingBalance = isLayaway ? total - downPayment : 0;
-            
-            const payload: SalePayload = {
-                cartItems: cart.map(item => ({ inventory_id: item.inventory_id, quantity: item.quantity, price_at_sale: item.price })),
-                paymentMethod, subtotal, discountAmount: discount, discountReason: discount > 0 ? 'Descuento en POS' : '', total, requiresInvoice,
-                specialOrderData: { isSpecialOrder, ...specialOrderDetails },
-                isLayaway,
-                downPayment,
-                remainingBalance
-            };
-            const result = await processSaleAction(payload);
-            if (result.success && result.orderId) {
-                setCart([]);
-                setIsSpecialOrder(false);
-                setRequiresInvoice(false);
-                setSpecialOrderDetails({});
-                router.push(`/admin/orders/${result.orderId}`);
-            } else {
-                setError(result.message || "Ocurrió un error al procesar la venta.");
-            }
-        });
+        console.log('🚀 Iniciando venta -', paymentMethod, 'Total:', total, isLayaway ? 'SEPARADO' : '', isSpecialOrder ? 'ESPECIAL' : '');
+        
+        // Verificaciones previas
+        if (cart.length === 0) { 
+            setError("El carrito está vacío."); 
+            return; 
+        }
+        
+        if (isSpecialOrder && !specialOrderDetails.customerName) { 
+            // Necesitamos los detalles del pedido especial primero
+            setError("Completa los detalles del pedido especial primero."); 
+            setPendingPaymentData({ paymentMethod, discount, total, isLayaway, downPayment });
+            return; 
+        }
+        
+        if (isLayaway && downPayment <= 0) { 
+            setError("El anticipo debe ser mayor a $0 para separados."); 
+            return; 
+        }
+        
+        if (isLayaway && downPayment > total) { 
+            setError("El anticipo no puede ser mayor al total."); 
+            return; 
+        }
+        
+        // Guardar datos del pago y mostrar modal de estados
+        setPendingPaymentData({ paymentMethod, discount, total, isLayaway, downPayment });
+        
+        // Preseleccionar estados apropiados
+        const defaultStatuses = [];
+        if (isLayaway) {
+            defaultStatuses.push('PENDING_PAYMENT');
+        }
+        if (isSpecialOrder && specialOrderDetails.embroideryNotes) {
+            defaultStatuses.push('PENDING_EMBROIDERY');
+        }
+        if (defaultStatuses.length === 0) {
+            defaultStatuses.push('COMPLETED');
+        }
+        
+        // Preseleccionar todos los items como entregados por defecto
+        const allItemIds = cart.map(item => item.inventory_id);
+        setDeliveredItems(allItemIds);
+        
+        console.log('🎯 Estados preseleccionados:', defaultStatuses);
+        setSelectedStatuses(defaultStatuses);
+        setShowStatusModal(true);
     };
 
     // --- Renderizado Condicional ---
-    if (isLoading || viewMode === 'loading') {
+    if (!isHydrated || isLoading || viewMode === 'loading') {
         return <div className="flex items-center justify-center h-screen bg-gray-100"><p className="text-xl font-semibold">Cargando Punto de Venta...</p></div>;
     }
 
     const sharedProps = {
         cart, schools, specialOrderDetails, handleAddToCart, handleUpdateQuantity, handleProcessSale,
         isProcessing, requiresInvoice, setRequiresInvoice, isSpecialOrder, setIsSpecialOrder,
-        setSpecialOrderDetails, error, setError,
+        handleSpecialOrderDetailsSave, hasPendingPayment: !!pendingPaymentData, error, setError,
     };
 
     if (viewMode === 'tablet') {
-        return <TabletPosView {...sharedProps} products={products} />;
+        return (
+            <>
+                <TabletPosView {...sharedProps} products={products} />
+                {showStatusModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl border border-gray-200/50 p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-lg font-medium mb-4 text-black">Configurar Estados de la Orden</h2>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Selecciona los estados que aplicarán a esta orden:
+                            </p>
+                            
+                            <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
+                                {availableStatuses.map((status) => {
+                                    const isSelected = selectedStatuses.includes(status.key);
+                                    
+                                    return (
+                                        <div key={status.key} className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                                            <label className="flex items-start space-x-3 cursor-pointer flex-1">
+                                                <div className="flex-shrink-0 mt-0.5">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => handleStatusToggle(status.key)}
+                                                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="font-medium text-gray-900 text-sm">
+                                                            {status.label}
+                                                        </span>
+                                                        {isSelected && <StatusBadge status={status.key} />}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {status.description}
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Sección de Items Entregados */}
+                            <div className="border-t pt-6 mt-6">
+                                <h3 className="text-base font-medium mb-3 text-black">Items Entregados</h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Selecciona los items que fueron entregados al cliente:
+                                </p>
+                                
+                                {/* Botones de Selección Rápida */}
+                                <div className="flex gap-2 mb-4">
+                                    <button
+                                        onClick={handleSelectAllItems}
+                                        className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 transition-colors"
+                                    >
+                                        Todos
+                                    </button>
+                                    <button
+                                        onClick={handleDeselectAllItems}
+                                        className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded-full hover:bg-red-200 transition-colors"
+                                    >
+                                        Ninguno
+                                    </button>
+                                </div>
+                                
+                                {/* Lista Compacta de Items */}
+                                <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                                    {cart.map((item) => {
+                                        const isDelivered = deliveredItems.includes(item.inventory_id);
+                                        
+                                        return (
+                                            <div key={item.inventory_id} className="flex items-center space-x-2 p-2 rounded-lg border hover:bg-gray-50 transition-colors">
+                                                <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                                                    <div className="flex-shrink-0">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isDelivered}
+                                                            onChange={() => handleItemDeliveryToggle(item.inventory_id)}
+                                                            className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-shrink-0">
+                                                        <Image 
+                                                            src={item.image_url || '/placeholder.jpg'} 
+                                                            alt={item.product_name} 
+                                                            width={32} 
+                                                            height={32} 
+                                                            className="w-8 h-8 object-cover rounded-md bg-gray-200" 
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center space-x-2">
+                                                            <p className="font-medium text-gray-900 text-xs truncate">
+                                                                {item.product_name}
+                                                            </p>
+                                                            {isDelivered && (
+                                                                <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                    ✓
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                                                            <span>{item.size}</span>
+                                                            <span>•</span>
+                                                            <span>{item.color}</span>
+                                                            <span>•</span>
+                                                            <span>Cant: {item.quantity}</span>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Resumen de Items */}
+                                <div className="bg-gray-50 rounded-lg p-2 mb-4">
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-gray-600">Items Entregados:</span>
+                                        <span className="font-medium text-gray-900">{deliveredItems.length} de {cart.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        setShowStatusModal(false);
+                                        setPendingPaymentData(null);
+                                        setSelectedStatuses([]);
+                                        setDeliveredItems([]);
+                                    }}
+                                    className="flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                
+                                {/* Botón especial para completar detalles si es necesario */}
+                                {isSpecialOrder && !specialOrderDetails.customerName && (
+                                    <button
+                                        onClick={() => {
+                                            setShowStatusModal(false);
+                                            // Abrir modal de detalles especiales
+                                            // Este se manejará por los componentes hijos
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors"
+                                    >
+                                        Completar Detalles
+                                    </button>
+                                )}
+                                
+                                <button
+                                    onClick={handleConfirmStatusesAndProcess}
+                                    disabled={selectedStatuses.length === 0 || (isSpecialOrder && !specialOrderDetails.customerName)}
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {isSpecialOrder && !specialOrderDetails.customerName ? 'Detalles Requeridos' : 'Procesar Venta'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </>
+        );
     }
 
-    return <DesktopPosView {...sharedProps} />;
+    return (
+        <>
+            <DesktopPosView {...sharedProps} />
+            {showStatusModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl border border-gray-200/50 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-lg font-medium mb-4 text-black">Configurar Estados de la Orden</h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Selecciona los estados que aplicarán a esta orden:
+                        </p>
+                        
+                        <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
+                            {availableStatuses.map((status) => {
+                                const isSelected = selectedStatuses.includes(status.key);
+                                
+                                return (
+                                    <div key={status.key} className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                                        <label className="flex items-start space-x-3 cursor-pointer flex-1">
+                                            <div className="flex-shrink-0 mt-0.5">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => handleStatusToggle(status.key)}
+                                                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="font-medium text-gray-900 text-sm">
+                                                        {status.label}
+                                                    </span>
+                                                    {isSelected && <StatusBadge status={status.key} />}
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    {status.description}
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Sección de Items Entregados */}
+                        <div className="border-t pt-6 mt-6">
+                            <h3 className="text-base font-medium mb-3 text-black">Items Entregados</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Selecciona los items que fueron entregados al cliente:
+                            </p>
+                            
+                            {/* Botones de Selección Rápida */}
+                            <div className="flex gap-2 mb-4">
+                                <button
+                                    onClick={handleSelectAllItems}
+                                    className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full hover:bg-green-200 transition-colors"
+                                >
+                                    Seleccionar Todos
+                                </button>
+                                <button
+                                    onClick={handleDeselectAllItems}
+                                    className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded-full hover:bg-red-200 transition-colors"
+                                >
+                                    Deseleccionar Todos
+                                </button>
+                            </div>
+                            
+                            {/* Lista de Items */}
+                            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                                {cart.map((item) => {
+                                    const isDelivered = deliveredItems.includes(item.inventory_id);
+                                    
+                                    return (
+                                        <div key={item.inventory_id} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                                            <label className="flex items-center space-x-3 cursor-pointer flex-1">
+                                                <div className="flex-shrink-0">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isDelivered}
+                                                        onChange={() => handleItemDeliveryToggle(item.inventory_id)}
+                                                        className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                                                    />
+                                                </div>
+                                                <div className="flex-shrink-0">
+                                                    <Image 
+                                                        src={item.image_url || '/placeholder.jpg'} 
+                                                        alt={item.product_name} 
+                                                        width={40} 
+                                                        height={40} 
+                                                        className="w-10 h-10 object-cover rounded-md bg-gray-200" 
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center space-x-2">
+                                                        <p className="font-medium text-gray-900 text-sm truncate">
+                                                            {item.product_name}
+                                                        </p>
+                                                        {isDelivered && (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                ✓ Entregado
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center space-x-4 mt-1">
+                                                        <span className="text-xs text-gray-500">
+                                                            Talla: {item.size}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            Color: {item.color}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            Cantidad: {item.quantity}
+                                                        </span>
+                                                        <span className="text-xs font-medium text-gray-900">
+                                                            ${(item.price * item.quantity).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Resumen */}
+                            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Items Entregados:</span>
+                                    <span className="font-medium text-gray-900">{deliveredItems.length} de {cart.length}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    setShowStatusModal(false);
+                                    setPendingPaymentData(null);
+                                    setSelectedStatuses([]);
+                                    setDeliveredItems([]);
+                                }}
+                                className="flex-1 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            
+                            {/* Botón especial para completar detalles si es necesario */}
+                            {isSpecialOrder && !specialOrderDetails.customerName && (
+                                <button
+                                    onClick={() => {
+                                        setShowStatusModal(false);
+                                        // Abrir modal de detalles especiales
+                                        // Este se manejará por los componentes hijos
+                                    }}
+                                    className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition-colors"
+                                >
+                                    Completar Detalles
+                                </button>
+                            )}
+                            
+                            <button
+                                onClick={handleConfirmStatusesAndProcess}
+                                disabled={selectedStatuses.length === 0 || (isSpecialOrder && !specialOrderDetails.customerName)}
+                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {isSpecialOrder && !specialOrderDetails.customerName ? 'Detalles Requeridos' : 'Procesar Venta'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                )}
+        </>
+    );
 }
