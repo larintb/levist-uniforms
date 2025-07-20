@@ -154,18 +154,32 @@ function OrderCard({ order }: { order: OrderDetails }) {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 animate-fade-in">
             <div className="p-6 md:p-8">
                 <div className="flex justify-between items-start mb-4">
-                    <div>
-                        <p className="text-sm font-medium text-indigo-600">Detalles de la Orden</p>
-                        <h2 className="text-2xl font-bold text-gray-900 break-all">
-                            #{order.order_id.substring(0, 8)}...
-                        </h2>
+                    <div className="flex items-start gap-3">
+                        <div>
+                            <p className="text-sm font-medium text-indigo-600">Detalles de la Orden</p>
+                            <h2 className="text-2xl font-bold text-gray-900 break-all">
+                                #{order.order_id.substring(0, 8)}...
+                            </h2>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            {order.embroidery_notes && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    🪡 Bordado
+                                </span>
+                            )}
+                            {order.school_name && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    🏫 Escuela
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center space-x-2">
                         <span className={`inline-block text-sm font-semibold px-3 py-1 rounded-full ${getStatusChipClass(order.order_status)}`}>
                             {order.order_status}
                         </span>
                         <Link
-                            href={`/admin/orders/${order.order_id}`}
+                            href={`/admin/orders/${order.order_id}/manage`}
                             title="Gestionar Orden"
                             className="p-2 text-gray-400 rounded-full hover:bg-gray-100 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                         >
@@ -178,16 +192,31 @@ function OrderCard({ order }: { order: OrderDetails }) {
                     <div className="col-span-1">
                         <dt className="text-sm font-medium text-gray-500">Fecha</dt>
                         <dd className="mt-1 text-md text-gray-900">
-                            {new Date(order.order_date).toLocaleDateString()}
+                            {new Date(order.order_date).toLocaleDateString('es-ES', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                            })}
+                        </dd>
+                        <dd className="text-xs text-gray-500">
+                            {new Date(order.order_date).toLocaleDateString('es-ES', {
+                                weekday: 'long'
+                            })}
                         </dd>
                     </div>
                     <div className="col-span-1">
                         <dt className="text-sm font-medium text-gray-500">Cliente</dt>
-                        <dd className="mt-1 text-md text-gray-900">{order.customer_name}</dd>
+                        <dd className="mt-1 text-md font-semibold text-gray-900">{order.customer_name || 'MOSTRADOR'}</dd>
+                        {order.customer_phone && (
+                            <dd className="text-xs text-gray-500">{order.customer_phone}</dd>
+                        )}
                     </div>
                     <div className="col-span-1">
                         <dt className="text-sm font-medium text-gray-500">Vendedor</dt>
-                        <dd className="mt-1 text-md text-gray-900">{order.seller_name}</dd>
+                        <dd className="mt-1 text-md text-gray-900">{order.seller_name || 'N/A'}</dd>
+                        {order.payment_method && (
+                            <dd className="text-xs text-gray-500">{order.payment_method}</dd>
+                        )}
                     </div>
                 </div>
 

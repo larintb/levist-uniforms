@@ -94,7 +94,8 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
             <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
             <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-            <p><b>CLIENTE:</b> <span className="font-black uppercase">{details.customer_name || 'MOSTRADOR'}</span></p>
+            <p><b>CLIENTE:</b></p>
+            <p className="font-black uppercase text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
         </section>
 
         {isSpecialOrder && (details.school_name || details.embroidery_notes) && (
@@ -210,8 +211,9 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
         </header>
         <section className="my-1 text-xs space-y-0.5 leading-tight">
             <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-            <p className="font-black text-sm"><b>CLIENTE:</b> <span className="font-black uppercase">{details.customer_name}</span></p>
-            {details.school_name && <p><b>Escuela:</b> {details.school_name}</p>}
+            <p><b>CLIENTE:</b></p>
+            <p className="font-black uppercase text-sm pl-2">{details.customer_name}</p>
+            {details.school_name && <p className="font-black text-sm"><b>Escuela:</b> {details.school_name}</p>}
         </section>
         {details.embroidery_notes && (
             <section className="my-1 p-1 border border-black rounded-sm bg-white">
