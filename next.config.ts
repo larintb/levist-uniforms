@@ -129,6 +129,13 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      // https://www.flexi.com.mx
+      {
+        protocol: 'https',
+        hostname: 'www.flexi.com.mx',
+        port: '',
+        pathname: '/**',
+      },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
       // {

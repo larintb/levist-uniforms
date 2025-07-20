@@ -77,8 +77,8 @@ export function MultiCopyPrintButton({
 
             {/* Modal para seleccionar número de copias */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+                <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
+                    <div className="bg-white p-6 rounded-lg shadow-xl border-2 border-gray-300 w-full max-w-md" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-bold mb-4 text-gray-900 flex items-center gap-2">
                             <PrintIcon />
                             Imprimir Órdenes de Trabajo

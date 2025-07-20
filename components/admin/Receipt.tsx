@@ -94,7 +94,7 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
             <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
             <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-            <p><b>Cliente:</b> {details.customer_name || 'Mostrador'}</p>
+            <p><b>CLIENTE:</b> <span className="font-black uppercase">{details.customer_name || 'MOSTRADOR'}</span></p>
         </section>
 
         {isSpecialOrder && (details.school_name || details.embroidery_notes) && (
@@ -210,13 +210,13 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
         </header>
         <section className="my-1 text-xs space-y-0.5 leading-tight">
             <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-            <p><b>Cliente:</b> {details.customer_name}</p>
+            <p className="font-black text-sm"><b>CLIENTE:</b> <span className="font-black uppercase">{details.customer_name}</span></p>
             {details.school_name && <p><b>Escuela:</b> {details.school_name}</p>}
         </section>
         {details.embroidery_notes && (
-            <section className="my-1 p-1 border border-black rounded-sm bg-yellow-100">
+            <section className="my-1 p-1 border border-black rounded-sm bg-white">
                 <h2 className="font-bold text-xs mb-0.5">Instrucciones:</h2>
-                <p className="text-[10px] whitespace-pre-wrap">{details.embroidery_notes}</p>
+                <p className="text-[10px] whitespace-pre-wrap font-bold">{details.embroidery_notes}</p>
             </section>
         )}
         <section className="border-t border-dashed border-black py-1 my-1">
