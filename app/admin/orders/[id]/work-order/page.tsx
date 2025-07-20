@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 import Image from 'next/image';
 
-// Componente simplificado que solo muestra la orden de trabajo
+// Componente actualizado que solo muestra la orden de trabajo
 type OrderDetailsForWorkOrder = {
     order_id: string;
     order_date: string;
@@ -14,6 +14,7 @@ type OrderDetailsForWorkOrder = {
     customer_phone: string | null;
     embroidery_notes: string | null;
     school_name?: string;
+    seller_name: string | null;
     items: {
         item_id: string;
         product_name: string;
@@ -83,13 +84,14 @@ async function getWorkOrderDetails(orderId: string): Promise<OrderDetailsForWork
         customer_phone: orderInfo.customer_phone,
         embroidery_notes: orderInfo.embroidery_notes,
         school_name: orderInfo.school_name,
+        seller_name: orderInfo.seller_name,
         items: items,
     };
 
     return workOrderDetails;
 }
 
-// Componente de Orden de Trabajo simplificado
+// Componente de Orden de Trabajo actualizado basado en Receipt.tsx
 function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
     return (
         <>
@@ -110,21 +112,32 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
             <div className="bg-white text-black p-1 font-mono max-w-[48mm] mx-auto work-order-printable">
                 <header className="text-center mb-1">
                     <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
-                    <h1 className="text-sm font-bold">Orden de Trabajo</h1>
+                    <h1 className="text-sm font-bold">Levist Uniforms</h1>
+                    <p className="text-[10px] leading-tight">Matamoros, Tamaulipas</p>
+                    <p className="mt-1 font-semibold text-xs">Orden de Trabajo</p>
                     <p className="font-semibold text-xs">PRODUCCIÓN / TALLER</p>
                 </header>
 
-                <section className="my-1 text-xs space-y-0.5 leading-tight">
+                <section className="my-1 text-[10px] space-y-0.5 leading-tight">
                     <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
                     <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
-                    <p><b>Cliente:</b> {details.customer_name}</p>
-                    {details.school_name && <p><b>Escuela:</b> {details.school_name}</p>}
+                    <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
+                    <p><b>CLIENTE:</b></p>
+                    <p className="font-black uppercase text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
                 </section>
 
+                {/* Sección destacada para la escuela */}
+                {details.school_name && (
+                    <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50">
+                        <p className="text-center font-black text-xs uppercase">🏫 ESCUELA</p>
+                        <p className="text-center font-bold text-sm uppercase">{details.school_name}</p>
+                    </section>
+                )}
+
                 {details.embroidery_notes && (
-                    <section className="my-1 p-1 border border-black rounded-sm bg-yellow-100">
+                    <section className="my-1 p-1 border border-black rounded-sm bg-white">
                         <h2 className="font-bold text-xs mb-0.5">Instrucciones:</h2>
-                        <p className="text-[10px] whitespace-pre-wrap">{details.embroidery_notes}</p>
+                        <p className="text-[10px] whitespace-pre-wrap font-bold">{details.embroidery_notes}</p>
                     </section>
                 )}
 
@@ -143,7 +156,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                 </section>
 
                 <footer className="mt-2 flex justify-center">
-                    <div className="w-16 h-16 bg-white p-0.5">
+                    <div className="w-20 h-20 bg-white p-0.5">
                         <QRCode 
                             value={details.order_id} 
                             size={128} 
