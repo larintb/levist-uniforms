@@ -96,7 +96,7 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
             <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
             <p><b>CLIENTE:</b></p>
-            <p className="font-black uppercase text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
+            <p className="font-black text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
         </section>
 
         {isSpecialOrder && (details.school_name || details.embroidery_notes) && (
@@ -224,7 +224,7 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
         <section className="my-1 text-xs space-y-0.5 leading-tight">
             <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
             <p><b>CLIENTE:</b></p>
-            <p className="font-black uppercase text-sm pl-2">{details.customer_name}</p>
+            <p className="font-black text-sm pl-2">{details.customer_name}</p>
             {details.school_name && <p className="font-black text-sm"><b>Escuela:</b> {details.school_name}</p>}
         </section>
         {details.embroidery_notes && (

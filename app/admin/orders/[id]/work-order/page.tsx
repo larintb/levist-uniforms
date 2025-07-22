@@ -123,7 +123,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
                     <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
                     <p><b>CLIENTE:</b></p>
-                    <p className="font-black uppercase text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
+                    <p className="font-black text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
                 </section>
 
                 {/* Sección destacada para la escuela */}
