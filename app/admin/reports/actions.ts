@@ -5,6 +5,22 @@ import { createClient } from '@/lib/supabase/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { cookies } from 'next/headers';
 
+// Helper function to determine if a date is in Daylight Saving Time for Chicago
+function isDaylightSavingTime(date: Date): boolean {
+  // DST in US: Second Sunday in March to First Sunday in November
+  const year = date.getFullYear();
+  
+  // Second Sunday in March
+  const marchSecondSunday = new Date(year, 2, 1); // March 1st
+  marchSecondSunday.setDate(marchSecondSunday.getDate() + (7 - marchSecondSunday.getDay()) % 7 + 7);
+  
+  // First Sunday in November  
+  const novemberFirstSunday = new Date(year, 10, 1); // November 1st
+  novemberFirstSunday.setDate(novemberFirstSunday.getDate() + (7 - novemberFirstSunday.getDay()) % 7);
+  
+  return date >= marchSecondSunday && date < novemberFirstSunday;
+}
+
 // Define the structure of our order data
 interface OrderDetail {
   order_id: number;
@@ -48,19 +64,35 @@ export async function getFinancialReport(
   
   try {
     // Await cookies before creating the Supabase client
-    await cookies(); // Keep this line since it might be needed for the createClient function
+    await cookies();
     const supabase = await createClient();
 
     // Base query from the detailed order view
     let query = supabase.from('full_order_details').select('*');
 
-    // Apply date filters if provided
+    // Apply date filters if provided - Converting from Chicago timezone to UTC
     if (startDate) {
-      // The timestamp in the DB is UTC, so we create the date string accordingly
-      query = query.gte('order_date', `${startDate}T00:00:00.000Z`);
+      // Create date at start of day in Chicago timezone
+      const startInChicago = new Date(`${startDate}T00:00:00`);
+      const isDST = isDaylightSavingTime(startInChicago);
+      
+      // Convert to UTC by adding the appropriate offset
+      // CDT (Daylight) = UTC-5, CST (Standard) = UTC-6
+      const hoursOffset = isDST ? 5 : 6;
+      const startUTC = new Date(startInChicago.getTime() + (hoursOffset * 3600000));
+      
+      query = query.gte('order_date', startUTC.toISOString());
     }
     if (endDate) {
-      query = query.lte('order_date', `${endDate}T23:59:59.999Z`);
+      // Create date at end of day in Chicago timezone
+      const endInChicago = new Date(`${endDate}T23:59:59`);
+      const isDST = isDaylightSavingTime(endInChicago);
+      
+      // Convert to UTC by adding the appropriate offset
+      const hoursOffset = isDST ? 5 : 6;
+      const endUTC = new Date(endInChicago.getTime() + (hoursOffset * 3600000));
+      
+      query = query.lte('order_date', endUTC.toISOString());
     }
     
     // Execute the query

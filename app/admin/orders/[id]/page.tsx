@@ -34,6 +34,7 @@ type OrderDetailsForReceipt = {
         size: string;
         quantity: number;
         price_at_sale: number;
+        delivered: boolean;
     }[];
 };
 
@@ -44,7 +45,7 @@ async function getOrderDetailsForReceipt(orderId: string): Promise<OrderDetailsF
     
     // 1. Obtener todos los detalles relacionados con los ítems desde la vista eficiente
     const { data: viewData, error: viewError } = await supabase
-        .from('full_order_details_view')
+        .from('full_order_details_with_statuses')
         .select('*')
         .eq('order_id', orderId);
 
@@ -76,6 +77,7 @@ async function getOrderDetailsForReceipt(orderId: string): Promise<OrderDetailsF
         size: row.size,
         quantity: row.quantity,
         price_at_sale: row.price_at_sale,
+        delivered: row.delivered,
     }));
 
     const orderDetails: OrderDetailsForReceipt = {

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import QRCode from 'react-qr-code';
 import { MultiCopyPrintButton } from './MultiCopyPrintButton';
 
-// --- Tipos de Datos (sin cambios) ---
+// --- Tipos de Datos ---
 type OrderDetail = {
     order_id: string;
     order_date: string;
@@ -31,6 +31,7 @@ type OrderDetail = {
         size: string;
         quantity: number;
         price_at_sale: number;
+        delivered: boolean; // Campo añadido para estado de entrega
     }[];
 };
 
@@ -118,7 +119,15 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                 {details.items.map(item => (
                     <div key={item.item_id} className="mt-3 flex items-start">
                         <div className="flex-grow pr-2">
-                            <span>{item.quantity}x {item.product_name}</span>
+                            <div>
+                                <span className={`font-black text-[9px] ${item.delivered ? 'text-black' : 'text-black'}`}>
+                                    {item.delivered ? '[E]' : '[P]'}
+                                </span>
+                                <span className="ml-1">{item.quantity}x {item.product_name}</span>
+                            </div>
+                            <div className="text-[8px] text-gray-600">
+                                {item.size} | {item.color}
+                            </div>
                         </div>
                         <div className="w-14 text-right pr-2">
                             ${item.price_at_sale.toFixed(2)}
@@ -188,6 +197,9 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
         </section>
         
         <footer className="mt-2 pt-1 border-t border-dashed border-black flex flex-col items-center text-center">
+            <div className="text-[8px] text-gray-700 mb-1">
+                [E] Entregado | [P] Pendiente
+            </div>
             <p className="text-[10px] mb-1">¡Gracias por su compra!</p>
             <div className="w-20 h-20 bg-white p-0.5">
                 <QRCode value={details.order_id} size={128} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 256 256`}/>
@@ -221,18 +233,7 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
                 <p className="text-[10px] whitespace-pre-wrap font-bold">{details.embroidery_notes}</p>
             </section>
         )}
-        <section className="border-t border-dashed border-black py-1 my-1">
-            <h2 className="font-bold text-xs mb-0.5">Prendas a Preparar:</h2>
-            <ul className="text-[10px] leading-tight space-y-1">
-                {details.items.map(item => (
-                    <li key={item.item_id} className="border-b border-dotted border-black pb-1">
-                        <p className="font-bold">{item.product_name}</p>
-                        <p>Talla: {item.size} | Color: {item.color}</p>
-                        <p>Cantidad: <b className="text-sm">{item.quantity}</b></p>
-                    </li>
-                ))}
-            </ul>
-        </section>
+        
         <footer className="mt-2 flex justify-center">
             <div className="w-20 h-20 bg-white p-0.5">
                 <QRCode value={details.order_id} size={128} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 256 256`}/>

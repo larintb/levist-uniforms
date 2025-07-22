@@ -129,7 +129,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                 {/* Sección destacada para la escuela */}
                 {details.school_name && (
                     <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50">
-                        <p className="text-center font-black text-xs uppercase">🏫 ESCUELA</p>
+                        <p className="text-center font-black text-xs uppercase">ESCUELA:</p>
                         <p className="text-center font-bold text-sm uppercase">{details.school_name}</p>
                     </section>
                 )}
@@ -140,20 +140,6 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                         <p className="text-[10px] whitespace-pre-wrap font-bold">{details.embroidery_notes}</p>
                     </section>
                 )}
-
-                <section className="border-t border-dashed border-black py-1 my-1">
-                    <h2 className="font-bold text-xs mb-0.5">Prendas a Preparar:</h2>
-                    <ul className="text-[10px] leading-tight space-y-1">
-                        {details.items.map(item => (
-                            <li key={item.item_id} className="border-b border-dotted border-black pb-1">
-                                <p className="font-bold">{item.product_name}</p>
-                                <p>SKU: {item.sku}</p>
-                                <p>Talla: {item.size} | Color: {item.color}</p>
-                                <p>Cantidad: <b className="text-sm">{item.quantity}</b></p>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
 
                 <footer className="mt-2 flex justify-center">
                     <div className="w-20 h-20 bg-white p-0.5">

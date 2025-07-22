@@ -10,220 +10,107 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-// Define types for table data
-// Added index signature to resolve type assignment error for the Table component.
-interface PaymentMethodData {
-  method: string;
-  total: number;
-  count: number;
-  [key: string]: string | number; // Added index signature
-}
+// A helper function to format dates
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 
-interface SellerData {
-  seller: string;
-  total: number;
-  count: number;
-  [key: string]: string | number; // Added index signature
-}
+// --- Modern UI Components ---
 
-interface ProductData {
-  product: string;
-  quantity: number;
-  total: number;
-  [key: string]: string | number; // Added index signature
-}
-
-// Column configuration type
-interface ColumnConfig<T> {
-  header: string;
-  accessor: keyof T;
-  format?: (value: T[keyof T]) => string; // Use the actual type from T
-}
-
-// --- Reusable UI Components ---
-
-// A styled card for displaying key metrics
-const StatCard = ({ title, value, icon }: { title: string; value: string | number; icon: React.ReactNode }) => (
-  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex items-center space-x-4">
-    <div className="bg-blue-100 dark:bg-blue-900/50 p-3 rounded-full">
-      {icon}
+// Enhanced stat card with trend indicators
+const ModernStatCard = ({ 
+  title, 
+  value, 
+  icon, 
+  trend, 
+  subtitle 
+}: { 
+  title: string; 
+  value: string | number; 
+  icon: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
+  subtitle?: string;
+}) => (
+  <div className="relative overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+    <div className="flex items-center justify-between">
+      <div className="flex-1">
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">{title}</p>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{value}</p>
+        {subtitle && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+        )}
+      </div>
+      <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg shadow-lg">
+        <div className="text-white">
+          {icon}
+        </div>
+      </div>
     </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+    {trend && (
+      <div className="absolute top-4 right-4">
+        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+          trend === 'up' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+          trend === 'down' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+          'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+        }`}>
+          {trend === 'up' ? '↗' : trend === 'down' ? '↘' : '→'}
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+// Modern data card for sections
+const DataCard = ({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) => (
+  <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}>
+    <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+    </div>
+    <div className="p-6">
+      {children}
     </div>
   </div>
 );
 
-// --- Main Page Component ---
-
-export default async function ReportsPage({
-  searchParams,
-}: {
-  // Define the type for searchParams
-  searchParams: Promise<{
-    startDate?: string;
-    endDate?: string;
-  }>;
-}) {
-  // Await searchParams before using its properties
-  const params = await searchParams;
-
-  // Get dates from URL search parameters, with fallbacks to the current month
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const todayStr = today.toISOString().split('T')[0];
-
-  // Safely access searchParams with defaults
-  const startDate = params.startDate || firstDayOfMonth;
-  const endDate = params.endDate || todayStr;
-
-  return (
-    <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Financial Reports</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            An overview of your business&apos;s sales and financial performance.
-          </p>
-        </header>
-
-        {/* Date Filter Form */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-8">
-          <form method="GET" className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-full">
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
-              <input
-                type="date"
-                id="startDate"
-                name="startDate"
-                defaultValue={startDate}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 p-2"
-              />
-            </div>
-            <div className="w-full">
-              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
-              <input
-                type="date"
-                id="endDate"
-                name="endDate"
-                defaultValue={endDate}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 p-2"
-              />
-            </div>
-            <div className="w-full sm:w-auto pt-5">
-              <button
-                type="submit"
-                className="w-full justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Generate Report
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Suspense boundary with a key to ensure it re-renders on date change */}
-        <Suspense key={startDate + endDate} fallback={<ReportSkeleton />}>
-          <ReportContent startDate={startDate} endDate={endDate} />
-        </Suspense>
-      </div>
-    </div>
-  );
-}
-
-// --- Data Display Component (fetches and renders data) ---
-async function ReportContent({ startDate, endDate }: { startDate: string, endDate: string }) {
-  // This is where the server action is called, inside an async component.
-  const report = await getFinancialReport(startDate, endDate);
-
-  // Placeholder Icons (replace with your icon library e.g., lucide-react)
-  const DollarSignIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
-  const ShoppingCartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>;
-  const PackageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>;
-  const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
-
-  return (
-    <>
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Total Sales" value={formatCurrency(report.totalSales)} icon={<DollarSignIcon />} />
-        <StatCard title="Total Orders" value={report.totalOrders} icon={<ShoppingCartIcon />} />
-        <StatCard title="Items Sold" value={report.totalItemsSold} icon={<PackageIcon />} />
-        <StatCard title="Avg. Order Value" value={formatCurrency(report.averageOrderValue)} icon={<UsersIcon />} />
-      </div>
-
-      {/* Data Tables Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Sales by Payment Method</h2>
-          <PaymentMethodTable data={report.salesByPaymentMethod} />
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Sales by Seller</h2>
-          <SellerTable data={report.salesBySeller} />
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md lg:col-span-2">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Top 10 Selling Products</h2>
-          <ProductTable data={report.topSellingProducts} />
-        </div>
-      </div>
-    </>
-  );
-}
-
-// Typed table components for different data types
-const PaymentMethodTable = ({ data }: { data: PaymentMethodData[] }) => {
-  const columns: ColumnConfig<PaymentMethodData>[] = [
-    { header: 'Method', accessor: 'method' },
-    { header: 'Transactions', accessor: 'count' },
-    { header: 'Total Value', accessor: 'total', format: (value) => formatCurrency(value as number) },
-  ];
-  return <Table data={data} columns={columns} />;
-};
-
-const SellerTable = ({ data }: { data: SellerData[] }) => {
-  const columns: ColumnConfig<SellerData>[] = [
-    { header: 'Seller', accessor: 'seller' },
-    { header: 'Items Sold', accessor: 'count' },
-    { header: 'Total Value', accessor: 'total', format: (value) => formatCurrency(value as number) },
-  ];
-  return <Table data={data} columns={columns} />;
-};
-
-const ProductTable = ({ data }: { data: ProductData[] }) => {
-  const columns: ColumnConfig<ProductData>[] = [
-    { header: 'Product', accessor: 'product' },
-    { header: 'Quantity Sold', accessor: 'quantity' },
-    { header: 'Total Revenue', accessor: 'total', format: (value) => formatCurrency(value as number) },
-  ];
-  return <Table data={data} columns={columns} />;
-};
-
-// A generic table component for reusability
-const Table = <T extends Record<string, string | number>>({
-  data,
-  columns
-}: {
-  data: T[];
-  columns: ColumnConfig<T>[]
+// Modern table component
+const ModernTable = ({ data, columns, emptyMessage = "No data available" }: {
+  data: Record<string, string | number>[];
+  columns: { header: string; accessor: string; formatter?: (value: string | number, row?: Record<string, string | number>) => string }[];
+  emptyMessage?: string;
 }) => {
   if (!data || data.length === 0) {
-    return <p className="text-gray-500 dark:text-gray-400">No data available for this period.</p>;
+    return (
+      <div className="text-center py-12">
+        <div className="text-gray-400 dark:text-gray-500 text-4xl mb-4">📊</div>
+        <p className="text-gray-500 dark:text-gray-400">{emptyMessage}</p>
+      </div>
+    );
   }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-          <tr>
-            {columns.map(col => <th key={String(col.accessor)} scope="col" className="px-6 py-3">{col.header}</th>)}
+    <div className="overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700">
+            {columns.map((col, index) => (
+              <th key={index} className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase tracking-wider">
+                {col.header}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody>
-          {data.map((row, index) => (
-            <tr key={index} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-              {columns.map(col => (
-                <td key={String(col.accessor)} className="px-6 py-4">
-                  {col.format ? col.format(row[col.accessor]) : row[col.accessor]}
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          {data.map((row, rowIndex) => (
+            <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+              {columns.map((col, colIndex) => (
+                <td key={colIndex} className="py-4 px-4 text-sm text-gray-900 dark:text-gray-100">
+                  {col.formatter ? col.formatter(row[col.accessor], row) : row[col.accessor]}
                 </td>
               ))}
             </tr>
@@ -234,17 +121,275 @@ const Table = <T extends Record<string, string | number>>({
   );
 };
 
-// A skeleton loader to show while data is being fetched
-const ReportSkeleton = () => (
-  <div>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-pulse">
+// --- Main Page Component ---
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    startDate?: string;
+    endDate?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  
+  // Get dates with better defaults
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const todayStr = today.toISOString().split('T')[0];
+
+  const startDate = params.startDate || firstDayOfMonth;
+  const endDate = params.endDate || todayStr;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8">
+        
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                Financial Dashboard
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
+                Comprehensive insights into your business performance
+              </p>
+            </div>
+            <div className="mt-4 lg:mt-0">
+              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                <span>📅</span>
+                <span>Report Period: {formatDate(startDate + 'T00:00:00')} - {formatDate(endDate + 'T23:59:59')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Date Filter Section */}
+        <div className="mb-8">
+          <DataCard title="📊 Report Filters" className="max-w-4xl">
+            <form method="GET" className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  name="startDate"
+                  defaultValue={startDate}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  defaultValue={endDate}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+                >
+                  🔄 Generate Report
+                </button>
+              </div>
+            </form>
+          </DataCard>
+        </div>
+
+        {/* Report Content */}
+        <Suspense key={startDate + endDate} fallback={<ModernReportSkeleton />}>
+          <ModernReportContent startDate={startDate} endDate={endDate} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+// --- Enhanced Report Content Component ---
+async function ModernReportContent({ startDate, endDate }: { startDate: string, endDate: string }) {
+  const report = await getFinancialReport(startDate, endDate);
+
+  // Enhanced Icons
+  const DollarIcon = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+    </svg>
+  );
+
+  const CartIcon = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0L17 13" />
+    </svg>
+  );
+
+  const PackageIcon = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    </svg>
+  );
+
+  const TrendIcon = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  );
+
+  return (
+    <div className="space-y-8">
+      
+      {/* Key Metrics Grid */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">📈 Key Performance Indicators</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <ModernStatCard 
+            title="Total Revenue" 
+            value={formatCurrency(report.totalSales)} 
+            icon={<DollarIcon />}
+            trend="up"
+            subtitle="Gross sales revenue"
+          />
+          <ModernStatCard 
+            title="Orders Processed" 
+            value={report.totalOrders.toLocaleString()} 
+            icon={<CartIcon />}
+            trend="neutral"
+            subtitle="Total completed orders"
+          />
+          <ModernStatCard 
+            title="Items Sold" 
+            value={report.totalItemsSold.toLocaleString()} 
+            icon={<PackageIcon />}
+            trend="up"
+            subtitle="Total units moved"
+          />
+          <ModernStatCard 
+            title="Average Order Value" 
+            value={formatCurrency(report.averageOrderValue)} 
+            icon={<TrendIcon />}
+            trend="neutral"
+            subtitle="Revenue per order"
+          />
+        </div>
+      </div>
+
+      {/* Data Analysis Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* Payment Methods */}
+        <DataCard title="💳 Payment Method Analysis">
+          <ModernTable 
+            data={report.salesByPaymentMethod}
+            columns={[
+              { header: "Method", accessor: "method" },
+              { header: "Transactions", accessor: "count", formatter: (val) => (val as number).toLocaleString() },
+              { header: "Total Value", accessor: "total", formatter: (val) => formatCurrency(val as number) },
+              { 
+                header: "Avg. Transaction", 
+                accessor: "total", 
+                formatter: (val, row) => formatCurrency((val as number) / (row?.count as number)) 
+              }
+            ]}
+            emptyMessage="No payment data available for this period"
+          />
+        </DataCard>
+
+        {/* Seller Performance */}
+        <DataCard title="👥 Seller Performance">
+          <ModernTable 
+            data={report.salesBySeller}
+            columns={[
+              { header: "Seller", accessor: "seller" },
+              { header: "Items Sold", accessor: "count", formatter: (val) => (val as number).toLocaleString() },
+              { header: "Total Revenue", accessor: "total", formatter: (val) => formatCurrency(val as number) },
+              { 
+                header: "Avg. per Item", 
+                accessor: "total", 
+                formatter: (val, row) => formatCurrency((val as number) / (row?.count as number)) 
+              }
+            ]}
+            emptyMessage="No seller data available for this period"
+          />
+        </DataCard>
+      </div>
+
+      {/* Top Products - Full Width */}
+      <DataCard title="🏆 Top Selling Products" className="col-span-full">
+        <ModernTable 
+          data={report.topSellingProducts}
+          columns={[
+            { header: "Product Name", accessor: "product" },
+            { header: "Units Sold", accessor: "quantity", formatter: (val) => (val as number).toLocaleString() },
+            { header: "Total Revenue", accessor: "total", formatter: (val) => formatCurrency(val as number) },
+            { 
+              header: "Avg. Price", 
+              accessor: "total", 
+              formatter: (val, row) => formatCurrency((val as number) / (row?.quantity as number)) 
+            },
+            { 
+              header: "Market Share", 
+              accessor: "quantity", 
+              formatter: (val) => `${(((val as number) / report.totalItemsSold) * 100).toFixed(1)}%` 
+            }
+          ]}
+          emptyMessage="No product sales data available for this period"
+        />
+      </DataCard>
+
+      {/* Summary Insights */}
+      {report.totalOrders > 0 && (
+        <DataCard title="💡 Key Insights">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {report.salesByPaymentMethod.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Payment Methods Used</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {report.salesBySeller.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Active Sellers</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                {report.topSellingProducts.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Product Varieties</div>
+            </div>
+          </div>
+        </DataCard>
+      )}
+    </div>
+  );
+}
+
+// Enhanced loading skeleton
+const ModernReportSkeleton = () => (
+  <div className="space-y-8 animate-pulse">
+    {/* Stats skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        <div key={i} className="h-32 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-xl"></div>
       ))}
     </div>
+    
+    {/* Tables skeleton */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      {[...Array(2)].map((_, i) => (
+        <div key={i} className="h-80 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-xl"></div>
+      ))}
     </div>
+    
+    {/* Full width table skeleton */}
+    <div className="h-96 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-xl"></div>
   </div>
 );
