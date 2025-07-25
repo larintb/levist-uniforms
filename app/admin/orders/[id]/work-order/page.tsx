@@ -118,11 +118,11 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     <p className="font-semibold text-xs">PRODUCCIÓN / TALLER</p>
                 </header>
 
-                <section className="my-1 text-[10px] space-y-0.5 leading-tight">
-                    <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-                    <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
-                    <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-                    <p><b>CLIENTE:</b></p>
+                <section className="my-1 space-y-0.5 leading-tight">
+                    <p className="font-black text-xs"><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
+                    <p className="font-black text-xs"><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
+                    <p className="font-black text-xs"><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
+                    <p className="font-black text-xs"><b>CLIENTE:</b></p>
                     <p className="font-black text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
                 </section>
 
@@ -137,7 +137,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                 {details.embroidery_notes && (
                     <section className="my-1 p-1 border border-black rounded-sm bg-white">
                         <h2 className="font-bold text-xs mb-0.5">Instrucciones:</h2>
-                        <p className="text-[10px] whitespace-pre-wrap font-bold">{details.embroidery_notes}</p>
+                        <p className="font-black text-xs whitespace-pre-wrap">{details.embroidery_notes}</p>
                     </section>
                 )}
 

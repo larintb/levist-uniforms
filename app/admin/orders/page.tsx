@@ -474,7 +474,7 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
                 {(order.embroidery_notes || order.school_name) && 
                     <div className="bg-white p-5 rounded-xl shadow-sm ring-1 ring-gray-900/5">
                         <h3 className="text-base font-semibold text-gray-900 mb-4">Detalles Adicionales</h3>
-                        {order.school_name && <p className="text-sm"><span className="font-semibold text-gray-800">Escuela:</span> {order.school_name}</p>}
+                        {order.school_name && <p className="text-sm"><span className="font-semibold text-gray-800">Escuela:</span> <span className="text-gray-600 whitespace-pre-wrap">{order.school_name}</span></p>}
                         {order.embroidery_notes && <p className="text-sm mt-2"><span className="font-semibold text-gray-800">Notas de Bordado:</span> <span className="text-gray-600 whitespace-pre-wrap">{order.embroidery_notes}</span></p>}
                     </div>
                 }

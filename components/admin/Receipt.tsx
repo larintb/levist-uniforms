@@ -91,25 +91,25 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             <p className="mt-1 font-semibold text-xs">{title}</p>
         </header>
 
-        <section className="my-1 text-[10px] leading-tight space-y-0.5">
-            <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-            <p><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
-            <p><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-            <p><b>CLIENTE:</b></p>
+        <section className="my-1 leading-tight space-y-0.5">
+            <p className="font-black text-xs"><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
+            <p className="font-black text-xs"><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
+            <p className="font-black text-xs"><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
+            <p className="font-black text-xs"><b>CLIENTE:</b></p>
             <p className="font-black text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
         </section>
 
         {isSpecialOrder && (details.school_name || details.embroidery_notes) && (
-            <section className="my-1 text-[10px] border-t border-dashed border-black pt-1">
+            <section className="my-1 border-t border-dashed border-black pt-1">
                 <h2 className="font-bold text-center text-xs mb-0.5">Detalles del Pedido</h2>
-                {details.school_name && <p><b>Escuela:</b> {details.school_name}</p>}
-                {details.embroidery_notes && <p><b>Notas:</b> {details.embroidery_notes}</p>}
+                {details.school_name && <p className="font-black text-xs"><b>Escuela:</b> {details.school_name}</p>}
+                {details.embroidery_notes && <p className="font-black text-xs"><b>Notas:</b> {details.embroidery_notes}</p>}
             </section>
         )}
 
         <section className="border-t border-b border-dashed border-black py-1 my-1">
-            <div className="w-full text-[10px] leading-tight">
-                <div className="flex font-bold">
+            <div className="w-full leading-tight">
+                <div className="flex font-black text-xs">
                     <div className="flex-grow pr-2">PRODUCTO</div>
                     <div className="w-14 text-right pr-2">UNIT</div>
                     <div className="w-14 text-right">TOTAL</div>
@@ -119,20 +119,20 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                 {details.items.map(item => (
                     <div key={item.item_id} className="mt-3 flex items-start">
                         <div className="flex-grow pr-2">
-                            <div>
-                                <span className={`font-black text-[9px] ${item.delivered ? 'text-black' : 'text-black'}`}>
+                            <div className="font-black text-xs">
+                                <span className={`${item.delivered ? 'text-black' : 'text-black'}`}>
                                     {item.delivered ? '[E]' : '[P]'}
                                 </span>
                                 <span className="ml-1">{item.quantity}x {item.product_name}</span>
                             </div>
-                            <div className="text-[8px] text-gray-600">
+                            <div className="font-black text-xs text-gray-600">
                                 {item.size} | {item.color}
                             </div>
                         </div>
-                        <div className="w-14 text-right pr-2">
+                        <div className="w-14 text-right pr-2 font-black text-xs">
                             ${item.price_at_sale.toFixed(2)}
                         </div>
-                        <div className="w-14 text-right">
+                        <div className="w-14 text-right font-black text-xs">
                             ${(item.price_at_sale * item.quantity).toFixed(2)}
                         </div>
                     </div>
@@ -140,8 +140,8 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             </div>
         </section>
         
-        <section className="mt-1 text-xs space-y-0.5">
-            <div className="flex justify-between text-[10px]">
+        <section className="mt-1 space-y-0.5">
+            <div className="flex justify-between font-black text-xs">
                 <span>SUBTOTAL:</span>
                 <span>${subtotal.toFixed(2)}</span>
             </div>
@@ -149,14 +149,14 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
             {/* ================================================================= */}
             {/* CORRECCIÓN: Se eliminó la condición para que siempre se muestre. */}
             {/* ================================================================= */}
-            <div className="flex justify-between text-[10px] text-black">
+            <div className="flex justify-between font-black text-xs text-black">
                 <span>DESCUENTO ({discountReason || 'General'}):</span>
                 <span>-${(discountAmount || 0).toFixed(2)}</span>
             </div>
             {/* ================================================================= */}
             
             {needsInvoice && (
-                <div className="flex justify-between text-[10px]">
+                <div className="flex justify-between font-black text-xs">
                     <span>IVA (16%):</span>
                     <span>${iva.toFixed(2)}</span>
                 </div>
@@ -167,7 +167,7 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                 <span>${details.order_total.toFixed(2)}</span>
             </div>
 
-            <div className="flex justify-between text-[10px] mt-1">
+            <div className="flex justify-between font-black text-xs mt-1">
                 <span>Método Pago:</span>
                 <span>{details.payment_method || 'N/A'}</span>
             </div>
@@ -177,18 +177,18 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                     <div className="text-center text-xs font-bold mb-1 bg-blue-50 p-1 rounded">
                         🏦 SEPARADO
                     </div>
-                    <div className="flex justify-between text-[10px]">
+                    <div className="flex justify-between font-black text-xs">
                         <span>Anticipo Pagado:</span>
                         <span className="text-black font-bold">-${details.down_payment.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-[10px]">
+                    <div className="flex justify-between font-black text-xs">
                         <span>Saldo Pendiente:</span>
                         <span className={`font-bold ${details.remaining_balance > 0 ? 'text-black' : 'text-black'}`}>
                             ${details.remaining_balance.toFixed(2)}
                         </span>
                     </div>
                     {details.remaining_balance > 0 && (
-                        <div className="text-center text-[10px] mt-1 p-1 bg-yellow-50 rounded">
+                        <div className="text-center font-black text-xs mt-1 p-1 bg-yellow-50 rounded">
                             ⚠️ RECUERDE COMPLETAR EL PAGO
                         </div>
                     )}
@@ -197,10 +197,10 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
         </section>
         
         <footer className="mt-2 pt-1 border-t border-dashed border-black flex flex-col items-center text-center">
-            <div className="text-[8px] text-gray-700 mb-1">
+            <div className="font-black text-xs text-gray-700 mb-1">
                 [E] Entregado | [P] Pendiente
             </div>
-            <p className="text-[10px] mb-1">¡Gracias por su compra!</p>
+            <p className="font-black text-xs mb-1">¡Gracias por su compra!</p>
             <div className="w-20 h-20 bg-white p-0.5">
                 <QRCode value={details.order_id} size={128} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 256 256`}/>
             </div>
@@ -221,16 +221,16 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
             <h1 className="text-sm font-bold">Orden de Trabajo</h1>
             <p className="font-semibold text-xs">PRODUCCIÓN / TALLER</p>
         </header>
-        <section className="my-1 text-xs space-y-0.5 leading-tight">
-            <p><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-            <p><b>CLIENTE:</b></p>
-            <p className="font-black text-sm pl-2">{details.customer_name}</p>
-            {details.school_name && <p className="font-black text-sm"><b>Escuela:</b> {details.school_name}</p>}
+        <section className="my-1 space-y-0.5 leading-tight">
+            <p className="font-black text-xs"><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
+            <p className="font-black text-xs"><b>CLIENTE:</b></p>
+            <p className="font-black text-xs pl-2">{details.customer_name}</p>
+            {details.school_name && <p className="font-black text-xs"><b>Escuela:</b> {details.school_name}</p>}
         </section>
         {details.embroidery_notes && (
             <section className="my-1 p-1 border border-black rounded-sm bg-white">
                 <h2 className="font-bold text-xs mb-0.5">Instrucciones:</h2>
-                <p className="text-[10px] whitespace-pre-wrap font-bold">{details.embroidery_notes}</p>
+                <p className="font-black text-xs whitespace-pre-wrap">{details.embroidery_notes}</p>
             </section>
         )}
         
