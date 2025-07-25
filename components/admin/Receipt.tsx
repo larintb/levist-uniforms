@@ -109,30 +109,30 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
 
         <section className="border-t border-b border-dashed border-black py-1 my-1">
             <div className="w-full leading-tight">
-                <div className="flex font-black text-xs">
-                    <div className="flex-grow pr-2">PRODUCTO</div>
-                    <div className="w-14 text-right pr-2">UNIT</div>
-                    <div className="w-14 text-right">TOTAL</div>
+                <div className="flex font-black text-xs mb-1">
+                    <div className="flex-grow pr-1">PRODUCTO</div>
+                    <div className="w-16 text-right pr-1">UNIT</div>
+                    <div className="w-16 text-right">TOTAL</div>
                 </div>
-                <div className="border-b border-dashed border-black w-full"></div>
+                <div className="border-b border-dashed border-black w-full mb-1"></div>
                 
                 {details.items.map(item => (
-                    <div key={item.item_id} className="mt-3 flex items-start">
-                        <div className="flex-grow pr-2">
+                    <div key={item.item_id} className="mb-2 flex items-start">
+                        <div className="flex-grow pr-1">
                             <div className="font-black text-xs">
                                 <span className={`${item.delivered ? 'text-black' : 'text-black'}`}>
                                     {item.delivered ? '[E]' : '[P]'}
                                 </span>
                                 <span className="ml-1">{item.quantity}x {item.product_name}</span>
                             </div>
-                            <div className="font-black text-xs text-gray-600">
+                            <div className="font-black text-[10px] text-gray-600 mt-0.5">
                                 {item.size} | {item.color}
                             </div>
                         </div>
-                        <div className="w-14 text-right pr-2 font-black text-xs">
+                        <div className="w-16 text-right pr-1 font-black text-xs">
                             ${item.price_at_sale.toFixed(2)}
                         </div>
-                        <div className="w-14 text-right font-black text-xs">
+                        <div className="w-16 text-right font-black text-xs">
                             ${(item.price_at_sale * item.quantity).toFixed(2)}
                         </div>
                     </div>
