@@ -83,7 +83,7 @@ interface CustomerTicketProps {
 }
 
 const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal, iva, discountAmount, discountReason }: CustomerTicketProps) => (
-    <div className="bg-white text-black p-1 font-sans">
+    <div className="bg-white text-black p-1" style={{ fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}>
         <header className="text-center mb-1">
             <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
             <h1 className="text-sm font-bold">Levist Uniforms</h1>
@@ -215,7 +215,7 @@ interface WorkOrderTicketProps {
 }
 
 const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
-    <div className="bg-white text-black p-1 font-sans">
+    <div className="bg-white text-black p-1" style={{ fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}>
         <header className="text-center mb-1">
             <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
             <h1 className="text-sm font-bold">Orden de Trabajo</h1>
@@ -278,7 +278,7 @@ export function Receipt({ details }: ReceiptProps) {
                     body * { visibility: hidden; }
                     .printable-area, .printable-area * { visibility: visible; }
                     html, body { margin: 0 !important; padding: 0 !important; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .printable-area { position: absolute; left: 0; top: 0; width: 48mm; height: auto; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 8pt; color: #000; background: #fff; }
+                    .printable-area { position: absolute; left: 0; top: 0; width: 48mm; height: auto; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif; font-size: 8pt; color: #000; background: #fff; }
                     .no-print { display: none !important; }
                     .cut-line { page-break-after: always; page-break-inside: avoid; }
                 }
