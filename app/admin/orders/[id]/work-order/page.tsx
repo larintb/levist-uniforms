@@ -100,7 +100,40 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     body * { visibility: hidden; }
                     .work-order-printable, .work-order-printable * { visibility: visible; }
                     html, body { margin: 0 !important; padding: 0 !important; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .work-order-printable { position: absolute; left: 0; top: 0; width: 48mm; height: auto; font-family: 'monospace', 'Courier New', Courier; font-size: 7pt; color: #000; background: #fff; }
+                    .work-order-printable { 
+                        position: absolute; 
+                        left: 0; 
+                        top: 0; 
+                        width: 48mm; 
+                        height: auto; 
+                        font-family: 'Arial Black', 'Helvetica Bold', 'monospace', 'Courier New', Courier; 
+                        font-size: 7pt; 
+                        color: #000 !important; 
+                        background: #fff; 
+                        font-weight: 700 !important; 
+                    }
+                    .work-order-printable * { 
+                        font-weight: 700 !important; 
+                        color: #000 !important; 
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        font-family: 'Arial Black', 'Helvetica Bold', 'monospace', 'Courier New', Courier !important;
+                    }
+                    .work-order-printable p, 
+                    .work-order-printable h1, 
+                    .work-order-printable h2,
+                    .work-order-printable span,
+                    .work-order-printable div { 
+                        font-weight: 700 !important; 
+                        color: #000 !important;
+                        font-family: 'Arial Black', 'Helvetica Bold', 'monospace' !important;
+                    }
+                    .work-order-printable b,
+                    .work-order-printable strong { 
+                        font-weight: 800 !important; 
+                        color: #000 !important;
+                        font-family: 'Arial Black', 'Helvetica Bold' !important;
+                    }
                     .no-print { display: none !important; }
                 }
                 @page {
@@ -109,35 +142,35 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                 }
             `}</style>
 
-            <div className="bg-white text-black p-1 font-mono max-w-[48mm] mx-auto work-order-printable">
-                <header className="text-center mb-1">
+            <div className="bg-white text-black p-1 font-mono max-w-[48mm] mx-auto work-order-printable font-black" style={{ fontWeight: '700', fontFamily: '"Arial Black", "Helvetica Bold", monospace, "Courier New", Courier' }}>
+                <header className="text-center mb-1" style={{ fontWeight: '700' }}>
                     <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
-                    <h1 className="text-sm font-bold">Levist Uniforms</h1>
-                    <p className="text-[10px] leading-tight">Matamoros, Tamaulipas</p>
-                    <p className="mt-1 font-semibold text-xs">Orden de Trabajo</p>
-                    <p className="font-semibold text-xs">PRODUCCIÓN / TALLER</p>
+                    <h1 className="text-sm font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Levist Uniforms</h1>
+                    <p className="text-[10px] leading-tight font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Matamoros, Tamaulipas</p>
+                    <p className="mt-1 font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Orden de Trabajo</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>PRODUCCIÓN / TALLER</p>
                 </header>
 
-                <section className="my-1 space-y-0.5 leading-tight">
-                    <p className="font-black text-xs"><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-                    <p className="font-black text-xs"><b>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
-                    <p className="font-black text-xs"><b>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-                    <p className="font-black text-xs"><b>CLIENTE:</b></p>
-                    <p className="font-black text-xs pl-2">{details.customer_name || 'MOSTRADOR'}</p>
+                <section className="my-1 space-y-0.5 leading-tight" style={{ fontWeight: '700' }}>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>Vendedor:</b> {details.seller_name || 'N/A'}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>CLIENTE:</b></p>
+                    <p className="font-black text-xs pl-2" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>{details.customer_name || 'MOSTRADOR'}</p>
                 </section>
 
                 {/* Sección destacada para la escuela */}
                 {details.school_name && (
-                    <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50">
-                        <p className="text-center font-black text-xs uppercase">ESCUELA:</p>
-                        <p className="text-center font-bold text-sm uppercase">{details.school_name}</p>
+                    <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50" style={{ fontWeight: '700' }}>
+                        <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>ESCUELA:</p>
+                        <p className="text-center font-black text-sm uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>{details.school_name}</p>
                     </section>
                 )}
 
                 {details.embroidery_notes && (
-                    <section className="my-1 p-1 border border-black rounded-sm bg-white">
-                        <h2 className="font-bold text-xs mb-0.5">Instrucciones:</h2>
-                        <p className="font-black text-xs whitespace-pre-wrap">{details.embroidery_notes}</p>
+                    <section className="my-1 p-1 border border-black rounded-sm bg-white" style={{ fontWeight: '700' }}>
+                        <h2 className="font-black text-xs mb-0.5" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Instrucciones:</h2>
+                        <p className="font-black text-xs whitespace-pre-wrap" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>{details.embroidery_notes}</p>
                     </section>
                 )}
 
