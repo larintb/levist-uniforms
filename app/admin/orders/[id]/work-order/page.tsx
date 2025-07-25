@@ -106,8 +106,8 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                         top: 0; 
                         width: 48mm; 
                         height: auto; 
-                        font-family: 'Arial Black', 'Helvetica Bold', 'monospace', 'Courier New', Courier; 
-                        font-size: 7pt; 
+                        font-family: 'Arial', 'Helvetica', sans-serif; 
+                        font-size: 8pt; 
                         color: #000 !important; 
                         background: #fff; 
                         font-weight: 700 !important; 
@@ -117,7 +117,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                         color: #000 !important; 
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
-                        font-family: 'Arial Black', 'Helvetica Bold', 'monospace', 'Courier New', Courier !important;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
                     }
                     .work-order-printable p, 
                     .work-order-printable h1, 
@@ -126,13 +126,13 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     .work-order-printable div { 
                         font-weight: 700 !important; 
                         color: #000 !important;
-                        font-family: 'Arial Black', 'Helvetica Bold', 'monospace' !important;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
                     }
                     .work-order-printable b,
                     .work-order-printable strong { 
                         font-weight: 800 !important; 
                         color: #000 !important;
-                        font-family: 'Arial Black', 'Helvetica Bold' !important;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
                     }
                     .no-print { display: none !important; }
                 }
@@ -142,35 +142,35 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                 }
             `}</style>
 
-            <div className="bg-white text-black p-1 font-mono max-w-[48mm] mx-auto work-order-printable font-black" style={{ fontWeight: '700', fontFamily: '"Arial Black", "Helvetica Bold", monospace, "Courier New", Courier' }}>
+            <div className="bg-white text-black p-1 font-sans max-w-[48mm] mx-auto work-order-printable font-black" style={{ fontWeight: '700', fontFamily: '"Arial", "Helvetica", sans-serif' }}>
                 <header className="text-center mb-1" style={{ fontWeight: '700' }}>
                     <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
-                    <h1 className="text-sm font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Levist Uniforms</h1>
-                    <p className="text-[10px] leading-tight font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Matamoros, Tamaulipas</p>
-                    <p className="mt-1 font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Orden de Trabajo</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>PRODUCCIÓN / TALLER</p>
+                    <h1 className="text-sm font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>Levist Uniforms</h1>
+                    <p className="text-[10px] leading-tight font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>Matamoros, Tamaulipas</p>
+                    <p className="mt-1 font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>Orden de Trabajo</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>PRODUCCIÓN / TALLER</p>
                 </header>
 
                 <section className="my-1 space-y-0.5 leading-tight" style={{ fontWeight: '700' }}>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}><b style={{ fontWeight: '800' }}>CLIENTE:</b></p>
-                    <p className="font-black text-xs pl-2" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>{details.customer_name || 'MOSTRADOR'}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}><b style={{ fontWeight: '800' }}>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}><b style={{ fontWeight: '800' }}>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}><b style={{ fontWeight: '800' }}>Vendedor:</b> {details.seller_name || 'N/A'}</p>
+                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}><b style={{ fontWeight: '800' }}>CLIENTE:</b></p>
+                    <p className="font-black text-xs pl-2" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>{details.customer_name || 'MOSTRADOR'}</p>
                 </section>
 
                 {/* Sección destacada para la escuela */}
                 {details.school_name && (
                     <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50" style={{ fontWeight: '700' }}>
-                        <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>ESCUELA:</p>
-                        <p className="text-center font-black text-sm uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>{details.school_name}</p>
+                        <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>ESCUELA:</p>
+                        <p className="text-center font-black text-sm uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>{details.school_name}</p>
                     </section>
                 )}
 
                 {details.embroidery_notes && (
                     <section className="my-1 p-1 border border-black rounded-sm bg-white" style={{ fontWeight: '700' }}>
-                        <h2 className="font-black text-xs mb-0.5" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>Instrucciones:</h2>
-                        <p className="font-black text-xs whitespace-pre-wrap" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial Black", "Helvetica Bold"' }}>{details.embroidery_notes}</p>
+                        <h2 className="font-black text-xs mb-0.5" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>Instrucciones:</h2>
+                        <p className="font-black text-xs whitespace-pre-wrap" style={{ fontWeight: '700', color: '#000', fontFamily: '"Arial", "Helvetica", sans-serif' }}>{details.embroidery_notes}</p>
                     </section>
                 )}
 
