@@ -125,60 +125,71 @@ const getStatusColor = (status: string) => {
 
 export function OrderManagementView({ orderDetails }: OrderManagementViewProps) {
     const [isPending, startTransition] = useTransition();
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     
     // Inicializar selectedStatuses basado en los estados activos de la orden
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
-        // Priorizar active_statuses si existe y no está vacío
-        if (orderDetails.active_statuses && Array.isArray(orderDetails.active_statuses) && orderDetails.active_statuses.length > 0) {
-            return orderDetails.active_statuses;
-        } 
-        // Si no hay active_statuses o está vacío, usar el status principal
-        else if (orderDetails.order_status) {
-            return [orderDetails.order_status];
-        }
-        // Fallback a estado por defecto
-        else {
-            return ['PENDING_PAYMENT'];
-        }
-    });
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+    const [isInitialized, setIsInitialized] = useState(false);
     
     const [whatsappMessage, setWhatsappMessage] = useState('');
 
-    // Efecto para actualizar estados cuando cambian los datos de la orden
+    // Inicializar estados solo una vez cuando el componente se monta
     useEffect(() => {
-        let newStatuses: string[] = [];
-        
-        if (orderDetails.active_statuses && Array.isArray(orderDetails.active_statuses) && orderDetails.active_statuses.length > 0) {
-            newStatuses = orderDetails.active_statuses;
-        } else if (orderDetails.order_status) {
-            newStatuses = [orderDetails.order_status];
-        } else {
-            newStatuses = ['PENDING_PAYMENT'];
+        if (!isInitialized) {
+            let initialStatuses: string[] = [];
+            
+            if (orderDetails.active_statuses && Array.isArray(orderDetails.active_statuses) && orderDetails.active_statuses.length > 0) {
+                initialStatuses = orderDetails.active_statuses;
+            } else if (orderDetails.order_status) {
+                initialStatuses = [orderDetails.order_status];
+            } else {
+                initialStatuses = ['PENDING_PAYMENT'];
+            }
+            
+            setSelectedStatuses(initialStatuses);
+            setIsInitialized(true);
         }
-        
-        // Solo actualizar si los estados han cambiado
-        const currentStatusesString = selectedStatuses.sort().join(',');
-        const newStatusesString = newStatuses.sort().join(',');
-        
-        if (currentStatusesString !== newStatusesString) {
-            setSelectedStatuses(newStatuses);
+    }, [orderDetails.active_statuses, orderDetails.order_status, orderDetails.order_id, isInitialized]);
+
+    // Efecto para limpiar mensajes después de un tiempo
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => setMessage(null), 5000);
+            return () => clearTimeout(timer);
         }
-    }, [orderDetails.active_statuses, orderDetails.order_status, orderDetails.order_id, selectedStatuses]);
+    }, [message]);
 
     const handleStatusChange = (status: string, checked: boolean) => {
-        setSelectedStatuses(prev => 
-            checked 
-                ? [...prev, status]
-                : prev.filter(s => s !== status)
-        );
+        setSelectedStatuses(prev => {
+            if (checked) {
+                // Agregar estado si no está ya incluido
+                return prev.includes(status) ? prev : [...prev, status];
+            } else {
+                // Remover estado
+                return prev.filter(s => s !== status);
+            }
+        });
     };
 
     const handleUpdateStatuses = () => {
         startTransition(async () => {
             try {
-                await updateOrderMultipleStatuses(orderDetails.order_id, selectedStatuses);
+                const result = await updateOrderMultipleStatuses(
+                    orderDetails.order_id, 
+                    selectedStatuses,
+                    'admin_user' // Usuario actual
+                );
+                
+                if (result.success) {
+                    setMessage({ type: 'success', text: 'Estados actualizados exitosamente' });
+                    // Forzar recarga de la página para mostrar los cambios actualizados
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    setMessage({ type: 'error', text: result.message });
+                }
             } catch (error) {
                 console.error('Error updating statuses:', error);
+                setMessage({ type: 'error', text: 'Error al actualizar los estados' });
             }
         });
     };
@@ -186,10 +197,17 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
     const handleToggleItemDelivery = (itemId: string, currentStatus: boolean) => {
         startTransition(async () => {
             try {
-                await updateItemDeliveryStatus(itemId, !currentStatus);
-                // Aquí podrías actualizar el estado local si fuera necesario
+                const result = await updateItemDeliveryStatus(itemId, !currentStatus);
+                if (result.success) {
+                    setMessage({ type: 'success', text: 'Estado de entrega actualizado' });
+                    // Forzar recarga de la página para mostrar los cambios actualizados
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    setMessage({ type: 'error', text: result.message });
+                }
             } catch (error) {
                 console.error('Error updating item delivery:', error);
+                setMessage({ type: 'error', text: 'Error al actualizar el estado de entrega del ítem' });
             }
         });
     };
@@ -197,10 +215,17 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
     const handleToggleAllItems = (delivered: boolean) => {
         startTransition(async () => {
             try {
-                await updateAllItemsDeliveryStatus(orderDetails.order_id, delivered);
-                // Aquí podrías actualizar el estado local si fuera necesario
+                const result = await updateAllItemsDeliveryStatus(orderDetails.order_id, delivered);
+                if (result.success) {
+                    setMessage({ type: 'success', text: 'Estados de entrega actualizados' });
+                    // Forzar recarga de la página para mostrar los cambios actualizados
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    setMessage({ type: 'error', text: result.message });
+                }
             } catch (error) {
                 console.error('Error updating all items delivery:', error);
+                setMessage({ type: 'error', text: 'Error al actualizar el estado de entrega de todos los ítems' });
             }
         });
     };
@@ -210,14 +235,20 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
         
         startTransition(async () => {
             try {
-                await sendWhatsAppNotification(
+                const result = await sendWhatsAppNotification(
                     orderDetails.customer_phone!, 
                     orderDetails.customer_name || 'Cliente', 
                     orderDetails.order_id
                 );
-                setWhatsappMessage('');
+                if (result.success) {
+                    setMessage({ type: 'success', text: 'Notificación enviada exitosamente' });
+                    setWhatsappMessage('');
+                } else {
+                    setMessage({ type: 'error', text: result.message });
+                }
             } catch (error) {
                 console.error('Error sending WhatsApp:', error);
+                setMessage({ type: 'error', text: 'Error al enviar la notificación de WhatsApp' });
             }
         });
     };
@@ -225,6 +256,36 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Mensaje de estado */}
+                {message && (
+                    <div className={`mb-4 p-4 rounded-md ${
+                        message.type === 'success' 
+                            ? 'bg-green-50 border border-green-200 text-green-800' 
+                            : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                {message.type === 'success' ? (
+                                    <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                                ) : (
+                                    <div className="h-5 w-5 text-red-400">❌</div>
+                                )}
+                            </div>
+                            <div className="ml-3">
+                                <p className="text-sm font-medium">{message.text}</p>
+                            </div>
+                            <div className="ml-auto pl-3">
+                                <button
+                                    onClick={() => setMessage(null)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
                 {/* Header */}
                 <div className="mb-8">
                     <Link
@@ -488,26 +549,45 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
                         {/* Estados de la Orden */}
                         <div className="bg-white shadow rounded-lg p-6">
                             <h3 className="text-lg font-medium text-gray-900 mb-4">Estados de la Orden</h3>
-                            <div className="space-y-3">
-                                {AVAILABLE_STATUSES.map((status) => (
-                                    <label key={status} className="flex items-center cursor-pointer group hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedStatuses.includes(status)}
-                                            onChange={(e) => handleStatusChange(status, e.target.checked)}
-                                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                        />
-                                        <div className="ml-3 flex items-center">
-                                            <span className={`text-sm px-3 py-1 rounded-full border font-medium ${getStatusColor(status)}`}>
+                            
+                            {/* Mostrar estados seleccionados */}
+                            {selectedStatuses.length > 0 && (
+                                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-xs font-medium text-blue-800 mb-2">Estados seleccionados:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {selectedStatuses.map(status => (
+                                            <span key={status} className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
                                                 {getStatusDisplayName(status)}
                                             </span>
-                                        </div>
-                                    </label>
-                                ))}
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <div className="space-y-3">
+                                {AVAILABLE_STATUSES.map((status) => {
+                                    const isChecked = selectedStatuses.includes(status);
+                                    return (
+                                        <label key={status} className="flex items-center cursor-pointer group hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={(e) => handleStatusChange(status, e.target.checked)}
+                                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                disabled={isPending}
+                                            />
+                                            <div className="ml-3 flex items-center">
+                                                <span className={`text-sm px-3 py-1 rounded-full border font-medium ${getStatusColor(status)}`}>
+                                                    {getStatusDisplayName(status)}
+                                                </span>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
                             </div>
                             <button
                                 onClick={handleUpdateStatuses}
-                                disabled={isPending}
+                                disabled={isPending || selectedStatuses.length === 0}
                                 className="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors"
                             >
                                 {isPending ? 'Actualizando...' : 'Actualizar Estados'}

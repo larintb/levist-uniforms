@@ -34,6 +34,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string): Pro
                 // Revalida las rutas para que los cambios se reflejen inmediatamente
                 revalidatePath('/admin/orders');
                 revalidatePath(`/admin/orders/${orderId}`);
+                revalidatePath(`/admin/orders/${orderId}/manage`);
                 
                 // Si el nuevo estado es 'COMPLETED', también revalidamos los productos para reflejar el stock
                 if (newStatus === 'COMPLETED') {
@@ -122,6 +123,7 @@ export async function updateItemDeliveryStatus(itemId: string, delivered: boolea
             if (data.success) {
                 // Revalida las rutas para que los cambios se reflejen inmediatamente
                 revalidatePath('/admin/orders');
+                revalidatePath('/admin/consulta');
                 return { success: true, message: data.message || "Estado de entrega actualizado con éxito." };
             } else {
                 return { success: false, message: data.message || "Error al actualizar el estado de entrega." };
@@ -160,6 +162,8 @@ export async function updateAllItemsDeliveryStatus(orderId: string, delivered: b
             if (data.success) {
                 // Revalida las rutas para que los cambios se reflejen inmediatamente
                 revalidatePath('/admin/orders');
+                revalidatePath('/admin/consulta');
+                revalidatePath(`/admin/orders/${orderId}/manage`);
                 return { success: true, message: data.message || "Estado de entrega actualizado con éxito." };
             } else {
                 return { success: false, message: data.message || "Error al actualizar el estado de entrega." };

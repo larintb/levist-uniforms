@@ -57,6 +57,9 @@ export async function updateOrderMultipleStatuses(
         }
 
         revalidatePath('/admin/orders');
+        revalidatePath(`/admin/orders/${orderId}`);
+        revalidatePath(`/admin/orders/${orderId}/manage`);
+        revalidatePath('/admin/dashboard');
         
         return {
             success: true,

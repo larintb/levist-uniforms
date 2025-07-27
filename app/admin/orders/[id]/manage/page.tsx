@@ -121,5 +121,9 @@ export default async function OrderManagePage({ params }: PageProps) {
         notFound();
     }
 
-    return <OrderManagementView orderDetails={orderDetails} />;
+    return (
+        <div>
+            <OrderManagementView orderDetails={orderDetails} />
+        </div>
+    );
 }
