@@ -27,6 +27,7 @@ const navLinks = [
   { name: 'Productos', href: '/admin/products', icon: PackageIcon },
   { name: 'Escuelas', href: '/admin/schools', icon: AcademicCapIcon },
   { name: 'Consulta', href: '/admin/consulta', icon: BarcodeIcon },
+  { name: 'Filtro Inventario', href: '/admin/filtro', icon: TagIcon },
   { name: 'Catálogo', href: '/admin/catalog', icon: TagIcon },
 ];
 
