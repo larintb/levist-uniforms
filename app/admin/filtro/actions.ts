@@ -118,9 +118,48 @@ export async function getColorsByCategoryAction(category: string): Promise<{
     }
 }
 
+// Nueva función para obtener SKUs específicos de una categoría y color
+export async function getSkusByCategoryAndColorAction(category: string, color: string): Promise<{
+    success: boolean;
+    skus: string[];
+    error?: string;
+}> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener SKUs únicos para la combinación categoría + color específica
+        const { data: viewData, error } = await supabase
+            .from('full_inventory_details')
+            .select('sku')
+            .eq('category', category)
+            .eq('color', color);
+
+        if (error) {
+            throw error;
+        }
+
+        // Extraer SKUs únicos y ordenar
+        const uniqueSkus = [...new Set(viewData.map(item => item.sku))].filter(Boolean).sort();
+
+        return {
+            success: true,
+            skus: uniqueSkus
+        };
+
+    } catch (error) {
+        console.error('Error getting SKUs by category and color:', error);
+        return {
+            success: false,
+            skus: [],
+            error: 'Error al obtener SKUs de la categoría y color'
+        };
+    }
+}
+
 export async function getInventoryFilterAction(
     category: string = '', 
-    color: string = ''
+    color: string = '',
+    sku: string = ''
 ): Promise<FilterResult> {
     try {
         const supabase = await createClient();
@@ -139,6 +178,10 @@ export async function getInventoryFilterAction(
 
         if (color) {
             query = query.eq('color', color);
+        }
+
+        if (sku) {
+            query = query.eq('sku', sku);
         }
 
         const { data: inventoryData, error } = await query;
@@ -183,8 +226,9 @@ export async function getInventoryFilterAction(
             // Los filtros ya se aplicaron en la consulta SQL, pero por seguridad:
             const categoryMatches = !category || item.category === category;
             const colorMatches = !color || item.color === color;
+            const skuMatches = !sku || item.sku_base === sku;
             
-            return hasValidData && categoryMatches && colorMatches;
+            return hasValidData && categoryMatches && colorMatches && skuMatches;
         });
 
         return {

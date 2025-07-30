@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from 'react';
-import { getInventoryFilterAction, getAllFilterOptionsAction, getColorsByCategoryAction } from './actions';
+import { getInventoryFilterAction, getAllFilterOptionsAction, getColorsByCategoryAction, getSkusByCategoryAndColorAction } from './actions';
 import Image from 'next/image';
 
 // --- Tipos de Datos ---
@@ -55,12 +55,14 @@ export default function FiltroInventarioPage() {
     const [categories, setCategories] = useState<string[]>([]);
     const [colors, setColors] = useState<string[]>([]);
     const [allColors, setAllColors] = useState<string[]>([]); // Todos los colores disponibles
+    const [skus, setSkus] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     // Estados de filtros
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedColor, setSelectedColor] = useState<string>('');
+    const [selectedSku, setSelectedSku] = useState<string>('');
     
     const [isPending, startTransition] = useTransition();
 
@@ -106,8 +108,33 @@ export default function FiltroInventarioPage() {
         updateColorsForCategory();
     }, [selectedCategory, allColors, selectedColor]);
 
+    // Actualizar SKUs cuando cambien categoría Y color
+    React.useEffect(() => {
+        const updateSkusForCategoryAndColor = async () => {
+            if (selectedCategory && selectedColor) {
+                try {
+                    const result = await getSkusByCategoryAndColorAction(selectedCategory, selectedColor);
+                    if (result.success) {
+                        setSkus(result.skus);
+                        // Si el SKU seleccionado no está disponible en esta combinación, limpiarlo
+                        if (selectedSku && !result.skus.includes(selectedSku)) {
+                            setSelectedSku('');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error cargando SKUs por categoría y color:', err);
+                }
+            } else {
+                // Si no hay categoría Y color seleccionados, limpiar SKUs
+                setSkus([]);
+                setSelectedSku('');
+            }
+        };
+        updateSkusForCategoryAndColor();
+    }, [selectedCategory, selectedColor, selectedSku]);
+
     const handleFilter = () => {
-        if (!selectedCategory && !selectedColor) {
+        if (!selectedCategory && !selectedColor && !selectedSku) {
             setError('Por favor selecciona al menos un filtro');
             return;
         }
@@ -117,7 +144,7 @@ export default function FiltroInventarioPage() {
                 setLoading(true);
                 setError(null);
                 
-                const result = await getInventoryFilterAction(selectedCategory, selectedColor);
+                const result = await getInventoryFilterAction(selectedCategory, selectedColor, selectedSku);
                 
                 if (result.success) {
                     setFilteredInventory(result.data);
@@ -136,10 +163,12 @@ export default function FiltroInventarioPage() {
     const handleClearFilters = () => {
         setSelectedCategory('');
         setSelectedColor('');
+        setSelectedSku('');
         setFilteredInventory([]);
         setError(null);
         // Restaurar todos los colores cuando se limpien los filtros
         setColors(allColors);
+        setSkus([]);
     };
 
     // Agrupar por SKU + Color (para separar variantes de diferentes colores)
@@ -173,7 +202,7 @@ export default function FiltroInventarioPage() {
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">Filtro de Inventario</h1>
                     <p className="text-lg text-gray-600">
-                        Busca productos por categoría y color, agrupados por SKU
+                        Busca productos por categoría, color y SKU específico
                     </p>
                 </div>
 
@@ -184,7 +213,7 @@ export default function FiltroInventarioPage() {
                         <h2 className="text-xl font-semibold text-gray-900">Filtros de Búsqueda</h2>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                         {/* Selector de Categoría */}
                         <div>
                             <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
@@ -220,6 +249,30 @@ export default function FiltroInventarioPage() {
                                 {colors.map((color) => (
                                     <option key={color} value={color}>
                                         {color}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Selector de SKU */}
+                        <div>
+                            <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-2">
+                                SKU
+                                {(!selectedCategory || !selectedColor) && (
+                                    <span className="text-xs text-gray-500 ml-1">(Selecciona categoría y color primero)</span>
+                                )}
+                            </label>
+                            <select
+                                id="sku"
+                                value={selectedSku}
+                                onChange={(e) => setSelectedSku(e.target.value)}
+                                disabled={!selectedCategory || !selectedColor}
+                                className="w-full rounded-lg border border-gray-300 px-4 py-3 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                            >
+                                <option value="">Todos los SKUs</option>
+                                {skus.map((sku) => (
+                                    <option key={sku} value={sku}>
+                                        {sku}
                                     </option>
                                 ))}
                             </select>
