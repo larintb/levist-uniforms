@@ -46,15 +46,16 @@ export async function getAllFilterOptionsAction(): Promise<{
     success: boolean;
     categories: string[];
     colors: string[];
+    skus: string[];
     error?: string;
 }> {
     try {
         const supabase = await createClient();
 
-        // Usar la vista para obtener categorías y colores únicos
+        // Usar la vista para obtener categorías, colores y SKUs únicos
         const { data: viewData, error } = await supabase
             .from('full_inventory_details')
-            .select('category, color');
+            .select('category, color, sku');
 
         if (error) {
             throw error;
@@ -63,11 +64,13 @@ export async function getAllFilterOptionsAction(): Promise<{
         // Extraer valores únicos y ordenar
         const uniqueCategories = [...new Set(viewData.map(item => item.category))].filter(Boolean).sort();
         const uniqueColors = [...new Set(viewData.map(item => item.color))].filter(Boolean).sort();
+        const uniqueSkus = [...new Set(viewData.map(item => item.sku))].filter(Boolean).sort();
 
         return {
             success: true,
             categories: uniqueCategories,
-            colors: uniqueColors
+            colors: uniqueColors,
+            skus: uniqueSkus
         };
 
     } catch (error) {
@@ -76,6 +79,7 @@ export async function getAllFilterOptionsAction(): Promise<{
             success: false,
             categories: [],
             colors: [],
+            skus: [],
             error: 'Error al obtener opciones de filtro'
         };
     }
@@ -118,6 +122,43 @@ export async function getColorsByCategoryAction(category: string): Promise<{
     }
 }
 
+// Nueva función para obtener SKUs específicos de una categoría (sin requerir color)
+export async function getSkusByCategoryAction(category: string): Promise<{
+    success: boolean;
+    skus: string[];
+    error?: string;
+}> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener SKUs únicos para la categoría específica, sin filtrar por color
+        const { data: viewData, error } = await supabase
+            .from('full_inventory_details')
+            .select('sku')
+            .eq('category', category);
+
+        if (error) {
+            throw error;
+        }
+
+        // Extraer SKUs únicos y ordenar
+        const uniqueSkus = [...new Set(viewData.map(item => item.sku))].filter(Boolean).sort();
+
+        return {
+            success: true,
+            skus: uniqueSkus
+        };
+
+    } catch (error) {
+        console.error('Error getting SKUs by category:', error);
+        return {
+            success: false,
+            skus: [],
+            error: 'Error al obtener SKUs de la categoría'
+        };
+    }
+}
+
 // Nueva función para obtener SKUs específicos de una categoría y color
 export async function getSkusByCategoryAndColorAction(category: string, color: string): Promise<{
     success: boolean;
@@ -152,6 +193,43 @@ export async function getSkusByCategoryAndColorAction(category: string, color: s
             success: false,
             skus: [],
             error: 'Error al obtener SKUs de la categoría y color'
+        };
+    }
+}
+
+// Nueva función para obtener SKUs solo por color (sin requerir categoría)
+export async function getSkusByColorAction(color: string): Promise<{
+    success: boolean;
+    skus: string[];
+    error?: string;
+}> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener SKUs únicos para el color específico, sin filtrar por categoría
+        const { data: viewData, error } = await supabase
+            .from('full_inventory_details')
+            .select('sku')
+            .eq('color', color);
+
+        if (error) {
+            throw error;
+        }
+
+        // Extraer SKUs únicos y ordenar
+        const uniqueSkus = [...new Set(viewData.map(item => item.sku))].filter(Boolean).sort();
+
+        return {
+            success: true,
+            skus: uniqueSkus
+        };
+
+    } catch (error) {
+        console.error('Error getting SKUs by color:', error);
+        return {
+            success: false,
+            skus: [],
+            error: 'Error al obtener SKUs del color'
         };
     }
 }
