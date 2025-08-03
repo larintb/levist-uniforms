@@ -7,8 +7,14 @@ import { updateItemDeliveryStatus, updateAllItemsDeliveryStatus } from './action
 import { updateOrderMultipleStatuses } from './multiple-status-actions';
 import { sendWhatsAppNotification } from './[id]/actions';
 import { MultiCopyPrintButton } from '@/components/admin/MultiCopyPrintButton';
+import { getSchools } from '@/app/admin/pos/actions';
 
 // --- Tipos de Datos ---
+type School = {
+    id: string;
+    name: string;
+};
+
 type OrderItem = {
     item_id: string;
     product_name: string;
@@ -102,19 +108,44 @@ const MultipleStatusBadges = ({ statuses }: { statuses: string[] }) => {
     );
 };
 
+// --- Componente para resaltar texto de búsqueda ---
+const HighlightedText = ({ text, searchTerm }: { text: string, searchTerm: string }) => {
+    if (!searchTerm.trim()) return <>{text}</>;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return (
+        <>
+            {parts.map((part, index) => 
+                regex.test(part) ? (
+                    <span key={index} className="bg-yellow-200 font-medium">{part}</span>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+};
+
 // --- Columna Izquierda: Lista de Ordenes (Diseño Mejorado) ---
-const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, setSortOrder, setDateFilter }: { 
+const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, setSortOrder, setDateFilter, setSchoolFilter, setCustomerSearchFilter, schools }: { 
     orders: Order[], 
     selectedOrder: Order | null, 
     setSelectedOrder: (order: Order) => void, 
     setFilter: (status: string) => void,
     setSortOrder: (order: 'asc' | 'desc') => void,
-    setDateFilter: (filter: string) => void
+    setDateFilter: (filter: string) => void,
+    setSchoolFilter: (schoolId: string) => void,
+    setCustomerSearchFilter: (search: string) => void,
+    schools: School[]
 }) => {
     const statuses = ["ALL", "PENDING_PAYMENT", "READY_FOR_PICKUP", "PENDING_EMBROIDERY", "PENDING_SUPPLIER", "LAYAWAY", "COMPLETED"];
     const dateFilters = ["ALL_TIME", "TODAY", "THIS_WEEK", "THIS_MONTH"];
     const [activeFilter, setActiveFilter] = useState("ALL");
     const [activeDateFilter, setActiveDateFilter] = useState("ALL_TIME");
+    const [activeSchoolFilter, setActiveSchoolFilter] = useState("ALL");
+    const [customerSearch, setCustomerSearch] = useState("");
     const [activeSortOrder, setActiveSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const handleFilterClick = (status: string) => {
@@ -130,6 +161,11 @@ const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, s
     const handleSortOrderClick = (order: 'asc' | 'desc') => {
         setActiveSortOrder(order);
         setSortOrder(order);
+    };
+
+    const handleSchoolFilterClick = (schoolId: string) => {
+        setActiveSchoolFilter(schoolId);
+        setSchoolFilter(schoolId);
     };
 
     const getStatusLabel = (status: string) => {
@@ -160,6 +196,42 @@ const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, s
             <div className="p-4 border-b border-gray-200">
                 <h1 className="text-xl font-bold text-gray-900">Ordenes</h1>
                 
+                {/* Buscador de Cliente */}
+                <div className="mt-4">
+                    <label htmlFor="customer-search" className="block text-sm font-medium text-gray-700 mb-2">
+                        🔍 Buscar Cliente:
+                    </label>
+                    <input
+                        id="customer-search"
+                        type="text"
+                        placeholder="Nombre, teléfono, escuela, vendedor o ID..."
+                        value={customerSearch}
+                        onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            setCustomerSearchFilter(e.target.value);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors text-gray-600"
+                    />
+                    <div className="flex justify-between items-center mt-1">
+                        {customerSearch && (
+                            <button
+                                onClick={() => {
+                                    setCustomerSearch("");
+                                    setCustomerSearchFilter("");
+                                }}
+                                className="text-xs text-gray-500 hover:text-gray-700 hover:underline"
+                            >
+                                ✕ Limpiar búsqueda
+                            </button>
+                        )}
+                        {orders.length > 0 && (
+                            <span className="text-xs text-gray-500">
+                                {orders.length} orden{orders.length !== 1 ? 'es' : ''} encontrada{orders.length !== 1 ? 's' : ''}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                
                 {/* Filtros de Estado */}
                 <div className="mt-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Estados:</h3>
@@ -184,6 +256,34 @@ const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, s
                     </div>
                 </div>
 
+                {/* Filtros de Escuela */}
+                <div className="mt-4">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Escuela:</h3>
+                    <div className="flex space-x-2 overflow-x-auto pb-2">
+                        <button 
+                            onClick={() => handleSchoolFilterClick("ALL")} 
+                            className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${activeSchoolFilter === "ALL" ? 'bg-purple-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                            Todas las escuelas
+                        </button>
+                        <button 
+                            onClick={() => handleSchoolFilterClick("NO_SCHOOL")} 
+                            className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${activeSchoolFilter === "NO_SCHOOL" ? 'bg-purple-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                            Sin escuela
+                        </button>
+                        {schools.map(school => (
+                            <button 
+                                key={school.id} 
+                                onClick={() => handleSchoolFilterClick(school.id)} 
+                                className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${activeSchoolFilter === school.id ? 'bg-purple-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                {school.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Ordenamiento */}
                 <div className="mt-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Ordenar por fecha:</h3>
@@ -198,31 +298,76 @@ const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, s
                 </div>
             </div>
             <ul className="flex-1 overflow-y-auto divide-y divide-gray-200">
-                {orders.map(order => (
+                {orders.length === 0 ? (
+                    <li className="p-8 text-center">
+                        <div className="text-gray-400 mb-2">
+                            {customerSearch ? '🔍' : '📋'}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                            {customerSearch 
+                                ? `No se encontraron órdenes que coincidan con "${customerSearch}"`
+                                : 'No hay órdenes que mostrar'
+                            }
+                        </p>
+                        {customerSearch && (
+                            <button
+                                onClick={() => {
+                                    setCustomerSearch("");
+                                    setCustomerSearchFilter("");
+                                }}
+                                className="mt-2 text-xs text-indigo-600 hover:text-indigo-800 underline"
+                            >
+                                Limpiar búsqueda y ver todas
+                            </button>
+                        )}
+                    </li>
+                ) : (
+                    orders.map(order => (
                     <li key={order.id}>
                         <button onClick={() => setSelectedOrder(order)} className={`w-full text-left p-4 transition-colors ${selectedOrder?.id === order.id ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
                             <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-gray-800 truncate">{order.customer_name || 'Cliente Mostrador'}</p>
+                                    <p className="font-semibold text-gray-800 truncate">
+                                        <HighlightedText 
+                                            text={order.customer_name || 'Cliente Mostrador'} 
+                                            searchTerm={customerSearch}
+                                        />
+                                    </p>
                                     {order.customer_phone && (
-                                        <p className="text-xs text-gray-600 mt-0.5 truncate">📞 {order.customer_phone}</p>
+                                        <p className="text-xs text-gray-600 mt-0.5 truncate">
+                                            📞 <HighlightedText 
+                                                text={order.customer_phone} 
+                                                searchTerm={customerSearch}
+                                            />
+                                        </p>
                                     )}
                                     {order.school_name && (
-                                        <p className="text-xs text-blue-600 mt-0.5 truncate font-medium">🏫 {order.school_name}</p>
+                                        <p className="text-xs text-blue-600 mt-0.5 truncate font-medium">
+                                            🏫 <HighlightedText 
+                                                text={order.school_name} 
+                                                searchTerm={customerSearch}
+                                            />
+                                        </p>
                                     )}
                                     <p className="text-xs text-gray-500 mt-0.5">📅 {new Date(order.created_at).toLocaleDateString('es-MX', { month: 'short', day: 'numeric', year: '2-digit' })}</p>
                                 </div>
                                 <p className="text-base font-bold text-gray-900 ml-2">${(order.total || 0).toFixed(2)}</p>
                             </div>
                             <div className="flex justify-between items-start mt-2">
-                                <p className="text-xs text-gray-500 font-mono">#{order.id.toUpperCase().slice(0, 8)}</p>
+                                <p className="text-xs text-gray-500 font-mono">
+                                    #<HighlightedText 
+                                        text={order.id.toUpperCase().slice(0, 8)} 
+                                        searchTerm={customerSearch}
+                                    />
+                                </p>
                                 <div className="flex-shrink-0">
                                     <MultipleStatusBadges statuses={order.active_statuses} />
                                 </div>
                             </div>
                         </button>
                     </li>
-                ))}
+                    ))
+                )}
             </ul>
         </div>
     );
@@ -646,6 +791,9 @@ export default function OrdersInteractivePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState("ALL");
     const [dateFilter, setDateFilter] = useState("ALL_TIME");
+    const [schoolFilter, setSchoolFilter] = useState("ALL");
+    const [customerSearchFilter, setCustomerSearchFilter] = useState("");
+    const [schools, setSchools] = useState<School[]>([]);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const supabase = createClient();
 
@@ -675,6 +823,46 @@ export default function OrdersInteractivePage() {
             }
         });
     };
+
+    // Función para filtrar por escuela
+    const filterOrdersBySchool = useCallback((orders: Order[], schoolFilter: string): Order[] => {
+        if (schoolFilter === "ALL") return orders;
+        
+        if (schoolFilter === "NO_SCHOOL") {
+            return orders.filter(order => !order.school_name);
+        }
+        
+        return orders.filter(order => {
+            const selectedSchool = schools.find(s => s.id === schoolFilter);
+            return selectedSchool && order.school_name === selectedSchool.name;
+        });
+    }, [schools]);
+
+    // Función para filtrar por nombre de cliente
+    const filterOrdersByCustomer = useCallback((orders: Order[], customerSearchFilter: string): Order[] => {
+        if (!customerSearchFilter.trim()) return orders;
+        
+        const searchTerm = customerSearchFilter.toLowerCase().trim();
+        
+        return orders.filter(order => {
+            // Buscar en nombre del cliente
+            const customerName = order.customer_name?.toLowerCase() || '';
+            // Buscar en teléfono del cliente
+            const customerPhone = order.customer_phone?.toLowerCase() || '';
+            // Buscar en ID de la orden (los primeros 8 caracteres)
+            const orderId = order.id.toLowerCase().slice(0, 8);
+            // Buscar en nombre de la escuela
+            const schoolName = order.school_name?.toLowerCase() || '';
+            // Buscar en nombre del vendedor
+            const sellerName = order.seller_name?.toLowerCase() || '';
+            
+            return customerName.includes(searchTerm) || 
+                   customerPhone.includes(searchTerm) || 
+                   orderId.includes(searchTerm) ||
+                   schoolName.includes(searchTerm) ||
+                   sellerName.includes(searchTerm);
+        });
+    }, []);
 
     // Función para ordenar por fecha
     const sortOrdersByDate = (orders: Order[], sortOrder: 'asc' | 'desc'): Order[] => {
@@ -745,11 +933,24 @@ export default function OrdersInteractivePage() {
         setOrders(allOrders);
     }, [supabase]);
 
+    // Función para cargar las escuelas
+    const fetchSchools = useCallback(async () => {
+        try {
+            const schoolsList = await getSchools();
+            setSchools(schoolsList);
+        } catch (error) {
+            console.error('Error fetching schools:', error);
+        }
+    }, []);
+
     // **HOOK CORREGIDO**
     // useEffect para la carga inicial y la suscripcion a cambios en tiempo real.
     useEffect(() => {
         setIsLoading(true);
-        fetchOrders().finally(() => setIsLoading(false));
+        Promise.all([
+            fetchOrders(),
+            fetchSchools()
+        ]).finally(() => setIsLoading(false));
 
         const channel = supabase.channel('realtime-orders')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, 
@@ -769,10 +970,10 @@ export default function OrdersInteractivePage() {
         return () => { 
             supabase.removeChannel(channel); 
         };
-    }, [fetchOrders, supabase]);
+    }, [fetchOrders, fetchSchools, supabase]);
     
     // **HOOK CORREGIDO**
-    // useEffect para filtrar y manejar la seleccion cuando el filtro, fecha, orden o las ordenes cambian.
+    // useEffect para filtrar y manejar la seleccion cuando el filtro, fecha, escuela, búsqueda, orden o las ordenes cambian.
     useEffect(() => {
         // Primero filtrar por estado
         const statusFiltered = filter === "ALL" ? orders : orders.filter(o => {
@@ -784,8 +985,14 @@ export default function OrdersInteractivePage() {
         // Luego filtrar por fecha
         const dateFiltered = filterOrdersByDate(statusFiltered, dateFilter);
 
+        // Luego filtrar por escuela
+        const schoolFiltered = filterOrdersBySchool(dateFiltered, schoolFilter);
+
+        // Luego filtrar por búsqueda de cliente
+        const customerFiltered = filterOrdersByCustomer(schoolFiltered, customerSearchFilter);
+
         // Finalmente ordenar
-        const sortedAndFiltered = sortOrdersByDate(dateFiltered, sortOrder);
+        const sortedAndFiltered = sortOrdersByDate(customerFiltered, sortOrder);
         
         setFilteredOrders(sortedAndFiltered);
         
@@ -800,7 +1007,7 @@ export default function OrdersInteractivePage() {
                 setSelectedOrder(updatedOrder);
             }
         }
-    }, [filter, dateFilter, sortOrder, orders, selectedOrder?.id]);
+    }, [filter, dateFilter, schoolFilter, customerSearchFilter, sortOrder, orders, selectedOrder?.id, schools, filterOrdersBySchool, filterOrdersByCustomer]);
 
     if (isLoading && orders.length === 0) {
         return <div className="flex items-center justify-center h-screen bg-gray-50"><p className="text-xl font-semibold text-gray-700">Cargando ordenes...</p></div>;
@@ -816,6 +1023,9 @@ export default function OrdersInteractivePage() {
                     setFilter={setFilter}
                     setSortOrder={setSortOrder}
                     setDateFilter={setDateFilter}
+                    setSchoolFilter={setSchoolFilter}
+                    setCustomerSearchFilter={setCustomerSearchFilter}
+                    schools={schools}
                 />
             </div>
             <div className="flex-1 h-full">
