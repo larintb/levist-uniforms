@@ -1,6 +1,7 @@
 // app/admin/reports/page.tsx
 import { getFinancialReport } from './actions';
 import { Suspense } from 'react';
+import TopProductsChart from '@/components/admin/TopProductsChart';
 
 // A helper function to format currency
 const formatCurrency = (amount: number) => {
@@ -281,10 +282,10 @@ async function ModernReportContent({ startDate, endDate }: { startDate: string, 
       </div>
 
       {/* Data Analysis Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-8">
         
-        {/* Payment Methods */}
-        <DataCard title="💳 Payment Method Analysis">
+        {/* Payment Methods - Full Width */}
+        <DataCard title="💳 Payment Method Analysis" className="w-full">
           <ModernTable 
             data={report.salesByPaymentMethod}
             columns={[
@@ -301,8 +302,8 @@ async function ModernReportContent({ startDate, endDate }: { startDate: string, 
           />
         </DataCard>
 
-        {/* Seller Performance */}
-        <DataCard title="👥 Seller Performance">
+        {/* Seller Performance - Full Width */}
+        <DataCard title="👥 Seller Performance" className="w-full">
           <ModernTable 
             data={report.salesBySeller}
             columns={[
@@ -320,26 +321,11 @@ async function ModernReportContent({ startDate, endDate }: { startDate: string, 
         </DataCard>
       </div>
 
-      {/* Top Products - Full Width */}
-      <DataCard title="🏆 Top Selling Products" className="col-span-full">
-        <ModernTable 
-          data={report.topSellingProducts}
-          columns={[
-            { header: "Product Name", accessor: "product" },
-            { header: "Units Sold", accessor: "quantity", formatter: (val) => (val as number).toLocaleString() },
-            { header: "Total Revenue", accessor: "total", formatter: (val) => formatCurrency(val as number) },
-            { 
-              header: "Avg. Price", 
-              accessor: "total", 
-              formatter: (val, row) => formatCurrency((val as number) / (row?.quantity as number)) 
-            },
-            { 
-              header: "Market Share", 
-              accessor: "quantity", 
-              formatter: (val) => `${(((val as number) / report.totalItemsSold) * 100).toFixed(1)}%` 
-            }
-          ]}
-          emptyMessage="No product sales data available for this period"
+      {/* Top Products Chart - Full Width */}
+      <DataCard title="🏆 Top Selling Products - Interactive Chart" className="col-span-full">
+        <TopProductsChart 
+          products={report.topSellingProducts} 
+          totalItemsSold={report.totalItemsSold}
         />
       </DataCard>
 
