@@ -17,7 +17,7 @@ export type School = {
 export type CartItem = {
     inventory_id: string;
     product_name: string;
-    image_url: string | null;
+    product_image: string | null;
     size: string;
     color: string;
     price: number;
@@ -158,7 +158,7 @@ const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, 
                             className="bg-white rounded-xl sm:rounded-2xl shadow-md p-2 sm:p-4 text-center flex flex-col justify-between items-center hover:ring-2 hover:ring-indigo-500 transition-all duration-200 hover:shadow-lg min-w-0"
                         >
                             <Image 
-                                src={product.colors[0]?.image_url || '/placeholder.jpg'} 
+                                src={product.colors[0]?.product_image || '/placeholder.jpg'} 
                                 alt={product.product_name} 
                                 width={300} 
                                 height={300} 
@@ -295,7 +295,7 @@ const PosCart = forwardRef<PosCartRef, {
                                 {/* Imagen del Producto - Responsive */}
                                 <div className="flex-shrink-0">
                                     <Image 
-                                        src={item.image_url || '/placeholder.jpg'} 
+                                        src={item.product_image || '/placeholder.jpg'} 
                                         alt={item.product_name} 
                                         width={80} 
                                         height={80} 
@@ -516,7 +516,7 @@ const VariantSelectionModal = ({ product, onClose, onAddToCart }: { product: Gro
     const handleAddToCart = () => {
         if (selectedVariant && selectedColor) {
             onAddToCart({
-                inventory_id: selectedVariant.inventory_id, product_name: product.product_name, image_url: selectedColor.image_url,
+                inventory_id: selectedVariant.inventory_id, product_name: product.product_name, product_image: selectedColor.product_image,
                 size: selectedVariant.size, color: selectedColor.color, price: selectedVariant.price, barcode: selectedVariant.barcode, quantity: 1,
             });
             onClose();
@@ -527,7 +527,7 @@ const VariantSelectionModal = ({ product, onClose, onAddToCart }: { product: Gro
         <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-300 p-8 m-4 max-w-md w-full" onClick={e => e.stopPropagation()}>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">{product.product_name}</h2>
-                <div className="mb-6"><h3 className="text-lg font-semibold text-gray-800 mb-3">Color</h3><div className="flex flex-wrap gap-3">{product.colors.map(color => (<button key={color.color} onClick={() => setSelectedColor(color)} className={`p-2 rounded-lg border-2 transition-all ${selectedColor?.color === color.color ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-gray-200'}`}><Image src={color.image_url || '/placeholder.jpg'} alt={color.color} width={80} height={80} className="w-20 h-20 object-cover rounded-md" /><p className="text-sm font-medium mt-1 text-center">{color.color}</p></button>))}</div></div>
+                <div className="mb-6"><h3 className="text-lg font-semibold text-gray-800 mb-3">Color</h3><div className="flex flex-wrap gap-3">{product.colors.map(color => (<button key={color.color} onClick={() => setSelectedColor(color)} className={`p-2 rounded-lg border-2 transition-all ${selectedColor?.color === color.color ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-gray-200'}`}><Image src={color.product_image || '/placeholder.jpg'} alt={color.color} width={80} height={80} className="w-20 h-20 object-cover rounded-md" /><p className="text-sm font-medium mt-1 text-center">{color.color}</p></button>))}</div></div>
                 {selectedColor && <div className="mb-8"><h3 className="text-lg font-semibold text-gray-800 mb-3">Talla</h3><div className="flex flex-wrap gap-3">{selectedColor.variants.map(variant => (<button key={variant.inventory_id} onClick={() => setSelectedVariant(variant)} className={`px-6 py-3 rounded-full text-base font-bold transition-colors ${selectedVariant?.inventory_id === variant.inventory_id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>{variant.size}</button>))}</div></div>}
                 <button onClick={handleAddToCart} disabled={!selectedVariant} className="w-full p-4 text-xl font-bold text-white bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed">Agregar al Carrito</button>
             </div>
@@ -636,7 +636,7 @@ const DesktopPosView: React.FC<DesktopPosViewProps> = ({ cart, schools, handleAd
             if (result.success && result.data) {
                 const product = result.data;
                 handleAddToCart({
-                    inventory_id: product.inventory_id, product_name: product.product_name, image_url: product.image_url,
+                    inventory_id: product.inventory_id, product_name: product.product_name, product_image: product.product_image,
                     size: product.size, color: product.color, price: product.price, barcode: product.barcode, quantity: 1,
                 });
             } else {
@@ -1121,7 +1121,7 @@ export default function PosPage() {
                                                     </div>
                                                     <div className="flex-shrink-0">
                                                         <Image 
-                                                            src={item.image_url || '/placeholder.jpg'} 
+                                                            src={item.product_image || '/placeholder.jpg'} 
                                                             alt={item.product_name} 
                                                             width={32} 
                                                             height={32} 
@@ -1288,7 +1288,7 @@ export default function PosPage() {
                                                 </div>
                                                 <div className="flex-shrink-0">
                                                     <Image 
-                                                        src={item.image_url || '/placeholder.jpg'} 
+                                                        src={item.product_image || '/placeholder.jpg'} 
                                                         alt={item.product_name} 
                                                         width={40} 
                                                         height={40} 
