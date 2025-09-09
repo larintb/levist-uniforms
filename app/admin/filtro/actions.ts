@@ -12,7 +12,7 @@ type FilteredInventoryItem = {
     size: string;
     stock: number;
     price: string;
-    image_url: string | null;
+    product_image: string | null;
     brand: string;
     collection: string;
     category: string;
@@ -28,7 +28,7 @@ type FullInventoryDetailsRow = {
     size: string;
     stock: number;
     price: number | null;
-    image_url: string | null;
+    product_image: string | null;
     brand: string;
     collection: string;
     category: string;
@@ -42,35 +42,45 @@ type FilterResult = {
 };
 
 // Nueva función para obtener todas las opciones disponibles sin filtros restrictivos
-export async function getAllFilterOptionsAction(): Promise<{
+export async function getAllFilterOptionsAction(includeOutOfStock: boolean = false): Promise<{
     success: boolean;
     categories: string[];
     colors: string[];
     skus: string[];
+    brands: string[];
     error?: string;
 }> {
     try {
         const supabase = await createClient();
 
-        // Usar la vista para obtener categorías, colores y SKUs únicos
-        const { data: viewData, error } = await supabase
+        // Usar la vista para obtener categorías, colores, SKUs y marcas únicos
+        // Filtrar por stock según la preferencia del usuario
+        let query = supabase
             .from('full_inventory_details')
-            .select('category, color, sku');
+            .select('category, color, sku, brand');
+
+        if (!includeOutOfStock) {
+            query = query.gt('stock', 0);
+        }
+
+        const { data: viewData, error } = await query;
 
         if (error) {
             throw error;
         }
 
-        // Extraer valores únicos y ordenar
+        // Extraer valores únicos y ordenar, filtrando valores null/undefined
         const uniqueCategories = [...new Set(viewData.map(item => item.category))].filter(Boolean).sort();
         const uniqueColors = [...new Set(viewData.map(item => item.color))].filter(Boolean).sort();
         const uniqueSkus = [...new Set(viewData.map(item => item.sku))].filter(Boolean).sort();
+        const uniqueBrands = [...new Set(viewData.map(item => item.brand))].filter(Boolean).sort();
 
         return {
             success: true,
             categories: uniqueCategories,
             colors: uniqueColors,
-            skus: uniqueSkus
+            skus: uniqueSkus,
+            brands: uniqueBrands
         };
 
     } catch (error) {
@@ -80,13 +90,14 @@ export async function getAllFilterOptionsAction(): Promise<{
             categories: [],
             colors: [],
             skus: [],
+            brands: [],
             error: 'Error al obtener opciones de filtro'
         };
     }
 }
 
 // Nueva función para obtener colores específicos de una categoría
-export async function getColorsByCategoryAction(category: string): Promise<{
+export async function getColorsByCategoryAction(category: string, includeOutOfStock: boolean = false): Promise<{
     success: boolean;
     colors: string[];
     error?: string;
@@ -95,10 +106,17 @@ export async function getColorsByCategoryAction(category: string): Promise<{
         const supabase = await createClient();
 
         // Obtener colores únicos para la categoría específica
-        const { data: viewData, error } = await supabase
+        // Filtrar por stock según la preferencia del usuario
+        let query = supabase
             .from('full_inventory_details')
             .select('color')
             .eq('category', category);
+
+        if (!includeOutOfStock) {
+            query = query.gt('stock', 0);
+        }
+
+        const { data: viewData, error } = await query;
 
         if (error) {
             throw error;
@@ -132,10 +150,12 @@ export async function getSkusByCategoryAction(category: string): Promise<{
         const supabase = await createClient();
 
         // Obtener SKUs únicos para la categoría específica, sin filtrar por color
+        // Solo incluir productos que tienen stock disponible
         const { data: viewData, error } = await supabase
             .from('full_inventory_details')
             .select('sku')
-            .eq('category', category);
+            .eq('category', category)
+            .gt('stock', 0);
 
         if (error) {
             throw error;
@@ -169,11 +189,13 @@ export async function getSkusByCategoryAndColorAction(category: string, color: s
         const supabase = await createClient();
 
         // Obtener SKUs únicos para la combinación categoría + color específica
+        // Solo incluir productos que tienen stock disponible
         const { data: viewData, error } = await supabase
             .from('full_inventory_details')
             .select('sku')
             .eq('category', category)
-            .eq('color', color);
+            .eq('color', color)
+            .gt('stock', 0);
 
         if (error) {
             throw error;
@@ -207,10 +229,12 @@ export async function getSkusByColorAction(color: string): Promise<{
         const supabase = await createClient();
 
         // Obtener SKUs únicos para el color específico, sin filtrar por categoría
+        // Solo incluir productos que tienen stock disponible
         const { data: viewData, error } = await supabase
             .from('full_inventory_details')
             .select('sku')
-            .eq('color', color);
+            .eq('color', color)
+            .gt('stock', 0);
 
         if (error) {
             throw error;
@@ -234,10 +258,130 @@ export async function getSkusByColorAction(color: string): Promise<{
     }
 }
 
+// Nueva función para obtener marcas específicas de una categoría
+export async function getBrandsByCategoryAction(category: string): Promise<{
+    success: boolean;
+    brands: string[];
+    error?: string;
+}> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener marcas únicas para la categoría específica
+        // Solo incluir productos que tienen stock disponible
+        const { data: viewData, error } = await supabase
+            .from('full_inventory_details')
+            .select('brand')
+            .eq('category', category)
+            .gt('stock', 0);
+
+        if (error) {
+            throw error;
+        }
+
+        // Extraer marcas únicas y ordenar
+        const uniqueBrands = [...new Set(viewData.map(item => item.brand))].filter(Boolean).sort();
+
+        return {
+            success: true,
+            brands: uniqueBrands
+        };
+
+    } catch (error) {
+        console.error('Error getting brands by category:', error);
+        return {
+            success: false,
+            brands: [],
+            error: 'Error al obtener marcas de la categoría'
+        };
+    }
+}
+
+// Nueva función para obtener marcas específicas de un color
+export async function getBrandsByColorAction(color: string): Promise<{
+    success: boolean;
+    brands: string[];
+    error?: string;
+}> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener marcas únicas para el color específico
+        // Solo incluir productos que tienen stock disponible
+        const { data: viewData, error } = await supabase
+            .from('full_inventory_details')
+            .select('brand')
+            .eq('color', color)
+            .gt('stock', 0);
+
+        if (error) {
+            throw error;
+        }
+
+        // Extraer marcas únicas y ordenar
+        const uniqueBrands = [...new Set(viewData.map(item => item.brand))].filter(Boolean).sort();
+
+        return {
+            success: true,
+            brands: uniqueBrands
+        };
+
+    } catch (error) {
+        console.error('Error getting brands by color:', error);
+        return {
+            success: false,
+            brands: [],
+            error: 'Error al obtener marcas del color'
+        };
+    }
+}
+
+// Nueva función para obtener marcas específicas de una categoría y color
+export async function getBrandsByCategoryAndColorAction(category: string, color: string): Promise<{
+    success: boolean;
+    brands: string[];
+    error?: string;
+}> {
+    try {
+        const supabase = await createClient();
+
+        // Obtener marcas únicas para la combinación categoría + color específica
+        // Solo incluir productos que tienen stock disponible
+        const { data: viewData, error } = await supabase
+            .from('full_inventory_details')
+            .select('brand')
+            .eq('category', category)
+            .eq('color', color)
+            .gt('stock', 0);
+
+        if (error) {
+            throw error;
+        }
+
+        // Extraer marcas únicas y ordenar
+        const uniqueBrands = [...new Set(viewData.map(item => item.brand))].filter(Boolean).sort();
+
+        return {
+            success: true,
+            brands: uniqueBrands
+        };
+
+    } catch (error) {
+        console.error('Error getting brands by category and color:', error);
+        return {
+            success: false,
+            brands: [],
+            error: 'Error al obtener marcas de la categoría y color'
+        };
+    }
+}
+
 export async function getInventoryFilterAction(
     category: string = '', 
     color: string = '',
-    sku: string = ''
+    sku: string = '',
+    brand: string = '',
+    includeOutOfStock: boolean = false
 ): Promise<FilterResult> {
     try {
         const supabase = await createClient();
@@ -246,8 +390,12 @@ export async function getInventoryFilterAction(
         let query = supabase
             .from('full_inventory_details')
             .select('*')
-            .eq('is_available', true)
-            .gte('stock', 0);
+            .eq('is_available', true);
+
+        // Filtrar por stock según la preferencia del usuario
+        if (!includeOutOfStock) {
+            query = query.gt('stock', 0);
+        }
 
         // Aplicar filtros si existen
         if (category) {
@@ -260,6 +408,10 @@ export async function getInventoryFilterAction(
 
         if (sku) {
             query = query.eq('sku', sku);
+        }
+
+        if (brand) {
+            query = query.eq('brand', brand);
         }
 
         const { data: inventoryData, error } = await query;
@@ -290,7 +442,7 @@ export async function getInventoryFilterAction(
             size: item.size,
             stock: item.stock,
             price: item.price?.toString() || '0',
-            image_url: item.image_url,
+            product_image: item.product_image,
             brand: item.brand,
             collection: item.collection,
             category: item.category
@@ -305,8 +457,9 @@ export async function getInventoryFilterAction(
             const categoryMatches = !category || item.category === category;
             const colorMatches = !color || item.color === color;
             const skuMatches = !sku || item.sku_base === sku;
+            const brandMatches = !brand || item.brand === brand;
             
-            return hasValidData && categoryMatches && colorMatches && skuMatches;
+            return hasValidData && categoryMatches && colorMatches && skuMatches && brandMatches;
         });
 
         return {

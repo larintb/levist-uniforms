@@ -17,7 +17,7 @@ export type ProductVariant = {
 
 export type ProductColorVariant = {
     color: string;
-    image_url: string | null;
+    product_image: string | null;
     variants: ProductVariant[];
 };
 
@@ -38,7 +38,7 @@ interface InventoryItem {
     inventory_id: string;
     product_id: string;
     product_name: string;
-    image_url: string;
+    product_image: string;
     size: string;
     color: string;
     price: number;
@@ -154,7 +154,7 @@ export async function getGroupedProducts(): Promise<GroupedProduct[]> {
                 colorVariant = {
                     color: color,
                     // @ts-expect-error: Ignoramos temporalmente el tipado complejo de Supabase
-                    image_url: item.product_variants.image_url,
+                    product_image: item.product_variants.image_url,
                     variants: [],
                 };
                 groupedProduct.colors.push(colorVariant);
@@ -188,7 +188,7 @@ export async function findProductByBarcode(barcode: string): Promise<FindResult>
     if (!barcode) { return { success: false, message: "El código de barras no puede estar vacío." }; }
     const supabase = await createClient();
     try {
-        const { data, error } = await supabase.from('full_inventory_details').select('inventory_id, product_id, product_name, image_url, size, color, price, stock, barcode').eq('barcode', barcode).single();
+        const { data, error } = await supabase.from('full_inventory_details').select('inventory_id, product_id, product_name, product_image, size, color, price, stock, barcode').eq('barcode', barcode).single();
         if (error) {
             if (error.code === 'PGRST116') return { success: false, message: "Código de barras no encontrado." };
             throw error;

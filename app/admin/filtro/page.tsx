@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from 'react';
-import { getInventoryFilterAction, getAllFilterOptionsAction, getColorsByCategoryAction, getSkusByCategoryAndColorAction, getSkusByColorAction, getSkusByCategoryAction } from './actions';
+import { getInventoryFilterAction, getAllFilterOptionsAction, getColorsByCategoryAction, getSkusByCategoryAndColorAction, getSkusByColorAction, getSkusByCategoryAction, getBrandsByCategoryAction, getBrandsByColorAction, getBrandsByCategoryAndColorAction } from './actions';
 import Image from 'next/image';
 
 // --- Tipos de Datos ---
@@ -14,7 +14,7 @@ type FilteredInventoryItem = {
     size: string;
     stock: number;
     price: string;
-    image_url: string | null;
+    product_image: string | null;
     brand: string;
     collection: string;
     category: string;
@@ -27,7 +27,7 @@ type GroupedBySku = {
         collection: string;
         category: string;
         color: string;
-        image_url: string | null;
+        product_image: string | null;
         sizes: {
             size: string;
             stock: number;
@@ -57,6 +57,8 @@ export default function FiltroInventarioPage() {
     const [allColors, setAllColors] = useState<string[]>([]); // Todos los colores disponibles
     const [skus, setSkus] = useState<string[]>([]);
     const [allSkus, setAllSkus] = useState<string[]>([]); // Todos los SKUs disponibles
+    const [brands, setBrands] = useState<string[]>([]);
+    const [allBrands, setAllBrands] = useState<string[]>([]); // Todas las marcas disponibles
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
@@ -64,14 +66,16 @@ export default function FiltroInventarioPage() {
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedColor, setSelectedColor] = useState<string>('');
     const [selectedSku, setSelectedSku] = useState<string>('');
+    const [selectedBrand, setSelectedBrand] = useState<string>('');
+    const [includeOutOfStock, setIncludeOutOfStock] = useState<boolean>(false);
     
     const [isPending, startTransition] = useTransition();
 
-    // Cargar categorías, colores y SKUs disponibles al montar el componente
+    // Cargar categorías, colores, SKUs y marcas disponibles al montar el componente
     React.useEffect(() => {
         const loadOptions = async () => {
             try {
-                const result = await getAllFilterOptionsAction();
+                const result = await getAllFilterOptionsAction(includeOutOfStock);
                 if (result.success) {
                     // Ya vienen ordenadas de la función
                     setCategories(result.categories);
@@ -79,20 +83,22 @@ export default function FiltroInventarioPage() {
                     setColors(result.colors); // Inicialmente mostramos todos los colores
                     setAllSkus(result.skus); // Guardamos todos los SKUs
                     setSkus(result.skus); // Inicialmente mostramos todos los SKUs
+                    setAllBrands(result.brands); // Guardamos todas las marcas
+                    setBrands(result.brands); // Inicialmente mostramos todas las marcas
                 }
             } catch (err) {
                 console.error('Error cargando opciones:', err);
             }
         };
         loadOptions();
-    }, []);
+    }, [includeOutOfStock]);
 
     // Actualizar colores cuando cambie la categoría seleccionada
     React.useEffect(() => {
         const updateColorsForCategory = async () => {
             if (selectedCategory) {
                 try {
-                    const result = await getColorsByCategoryAction(selectedCategory);
+                    const result = await getColorsByCategoryAction(selectedCategory, includeOutOfStock);
                     if (result.success) {
                         setColors(result.colors);
                         // Si el color seleccionado no está disponible en esta categoría, limpiarlo
@@ -109,7 +115,60 @@ export default function FiltroInventarioPage() {
             }
         };
         updateColorsForCategory();
-    }, [selectedCategory, allColors, selectedColor]);
+    }, [selectedCategory, allColors, selectedColor, includeOutOfStock]);
+
+    // Actualizar marcas basado en los filtros seleccionados
+    React.useEffect(() => {
+        const updateBrandsForFilters = async () => {
+            if (selectedCategory && selectedColor) {
+                // Ambos seleccionados: usar la función específica de categoría + color
+                try {
+                    const result = await getBrandsByCategoryAndColorAction(selectedCategory, selectedColor);
+                    if (result.success) {
+                        setBrands(result.brands);
+                        // Si la marca seleccionada no está disponible en esta combinación, limpiarla
+                        if (selectedBrand && !result.brands.includes(selectedBrand)) {
+                            setSelectedBrand('');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error cargando marcas por categoría y color:', err);
+                }
+            } else if (selectedCategory && !selectedColor) {
+                // Solo categoría seleccionada: usar la función por categoría
+                try {
+                    const result = await getBrandsByCategoryAction(selectedCategory);
+                    if (result.success) {
+                        setBrands(result.brands);
+                        // Si la marca seleccionada no está disponible para esta categoría, limpiarla
+                        if (selectedBrand && !result.brands.includes(selectedBrand)) {
+                            setSelectedBrand('');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error cargando marcas por categoría:', err);
+                }
+            } else if (!selectedCategory && selectedColor) {
+                // Solo color seleccionado: usar la función solo por color
+                try {
+                    const result = await getBrandsByColorAction(selectedColor);
+                    if (result.success) {
+                        setBrands(result.brands);
+                        // Si la marca seleccionada no está disponible para este color, limpiarla
+                        if (selectedBrand && !result.brands.includes(selectedBrand)) {
+                            setSelectedBrand('');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error cargando marcas por color:', err);
+                }
+            } else {
+                // Ningún filtro seleccionado: mostrar todas las marcas disponibles
+                setBrands(allBrands);
+            }
+        };
+        updateBrandsForFilters();
+    }, [selectedCategory, selectedColor, selectedBrand, allBrands]);
 
     // Actualizar SKUs basado en los filtros seleccionados
     React.useEffect(() => {
@@ -166,8 +225,8 @@ export default function FiltroInventarioPage() {
 
     const handleFilter = () => {
         // Permitir filtrar si al menos uno de los filtros está seleccionado
-        if (!selectedCategory && !selectedColor && !selectedSku) {
-            setError('Por favor selecciona al menos un filtro (categoría, color o SKU)');
+        if (!selectedCategory && !selectedColor && !selectedSku && !selectedBrand) {
+            setError('Por favor selecciona al menos un filtro (categoría, color, SKU o marca)');
             return;
         }
 
@@ -176,7 +235,7 @@ export default function FiltroInventarioPage() {
                 setLoading(true);
                 setError(null);
                 
-                const result = await getInventoryFilterAction(selectedCategory, selectedColor, selectedSku);
+                const result = await getInventoryFilterAction(selectedCategory, selectedColor, selectedSku, selectedBrand, includeOutOfStock);
                 
                 if (result.success) {
                     setFilteredInventory(result.data);
@@ -196,11 +255,14 @@ export default function FiltroInventarioPage() {
         setSelectedCategory('');
         setSelectedColor('');
         setSelectedSku('');
+        setSelectedBrand('');
+        setIncludeOutOfStock(false);
         setFilteredInventory([]);
         setError(null);
-        // Restaurar todos los colores y SKUs cuando se limpien los filtros
+        // Restaurar todos los colores, SKUs y marcas cuando se limpien los filtros
         setColors(allColors);
         setSkus(allSkus);
+        setBrands(allBrands);
     };
 
     // Agrupar por SKU + Color (para separar variantes de diferentes colores)
@@ -213,7 +275,7 @@ export default function FiltroInventarioPage() {
                 collection: item.collection,
                 category: item.category,
                 color: item.color,
-                image_url: item.image_url,
+                product_image: item.product_image,
                 sizes: []
             };
         }
@@ -234,7 +296,7 @@ export default function FiltroInventarioPage() {
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">Filtro de Inventario</h1>
                     <p className="text-lg text-gray-600">
-                        Busca productos por categoría, color y SKU específico
+                        Busca productos por categoría, color, marca y SKU específico
                     </p>
                 </div>
 
@@ -245,7 +307,7 @@ export default function FiltroInventarioPage() {
                         <h2 className="text-xl font-semibold text-gray-900">Filtros de Búsqueda</h2>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                         {/* Selector de Categoría */}
                         <div>
                             <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
@@ -286,6 +348,26 @@ export default function FiltroInventarioPage() {
                             </select>
                         </div>
 
+                        {/* Selector de Marca */}
+                        <div>
+                            <label htmlFor="brand" className="block text-sm font-medium text-gray-700 mb-2">
+                                Marca
+                            </label>
+                            <select
+                                id="brand"
+                                value={selectedBrand}
+                                onChange={(e) => setSelectedBrand(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 px-4 py-3 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            >
+                                <option value="">Todas las marcas</option>
+                                {brands.map((brand) => (
+                                    <option key={brand} value={brand}>
+                                        {brand}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         {/* Selector de SKU */}
                         <div>
                             <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-2">
@@ -304,6 +386,36 @@ export default function FiltroInventarioPage() {
                                     </option>
                                 ))}
                             </select>
+                        </div>
+                    </div>
+
+                    {/* Toggle para incluir productos sin stock */}
+                    <div className="mb-6">
+                        <div className="flex items-center gap-3">
+                            <label htmlFor="includeOutOfStock" className="flex items-center cursor-pointer">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        id="includeOutOfStock"
+                                        checked={includeOutOfStock}
+                                        onChange={(e) => setIncludeOutOfStock(e.target.checked)}
+                                        className="sr-only"
+                                    />
+                                    <div className={`w-10 h-6 rounded-full shadow-inner transition-colors duration-200 ${
+                                        includeOutOfStock ? 'bg-blue-600' : 'bg-gray-300'
+                                    }`}>
+                                        <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
+                                            includeOutOfStock ? 'translate-x-5' : 'translate-x-1'
+                                        } mt-1`}></div>
+                                    </div>
+                                </div>
+                                <span className="ml-3 text-sm font-medium text-gray-700">
+                                    Incluir productos sin stock
+                                </span>
+                            </label>
+                            <div className="text-xs text-gray-500">
+                                {includeOutOfStock ? 'Mostrando todos los productos' : 'Solo productos con stock disponible'}
+                            </div>
                         </div>
                     </div>
 
@@ -350,9 +462,9 @@ export default function FiltroInventarioPage() {
                                     {/* Imagen y título */}
                                     <div className="flex items-start gap-4 mb-4">
                                         <div className="flex-shrink-0 w-16 h-16">
-                                            {product.image_url ? (
+                                            {product.product_image ? (
                                                 <Image
-                                                    src={product.image_url}
+                                                    src={product.product_image}
                                                     alt={product.product_name}
                                                     width={64}
                                                     height={64}
@@ -428,7 +540,7 @@ export default function FiltroInventarioPage() {
                             Selecciona filtros para buscar
                         </h3>
                         <p className="text-gray-600">
-                            Elige una categoría y/o color para ver los productos disponibles
+                            Elige una categoría, color, marca y/o SKU para ver los productos disponibles
                         </p>
                     </div>
                 )}

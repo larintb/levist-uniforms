@@ -89,7 +89,7 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
                         {items.map(item => (
                             <li key={item.inventory_id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                                 <Image
-                                    src={item.image_url || 'https://placehold.co/64x64/e2e8f0/e2e8f0'}
+                                    src={item.product_image || 'https://placehold.co/64x64/e2e8f0/e2e8f0'}
                                     alt={item.name}
                                     className="h-16 w-16 rounded-md object-cover bg-gray-200"
                                     width={64}

@@ -136,6 +136,13 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      // miplayera.com.mx
+      {
+        protocol: 'https',
+        hostname: 'miplayera.com.mx',
+        port: '',
+        pathname: '/**',
+      },
       // Puedes añadir más dominios aquí en el futuro.
       // Ejemplo:
       // {
