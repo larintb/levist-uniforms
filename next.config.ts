@@ -15,6 +15,7 @@ const nextConfig = {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
   images: {
+    unoptimized: true,
     // Aquí autorizamos los dominios desde los cuales se cargarán las imágenes.
     remotePatterns: [
       // https://www.winkscrubs.com
