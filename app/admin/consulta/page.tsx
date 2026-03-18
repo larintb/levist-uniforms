@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { searchAction, addInventoryEntryAction, updateInventoryItemPrice } from '@/app/admin/consulta/actions';
+import { searchAction, addInventoryEntryAction, updateInventoryItemPrice, updateInventoryStock } from '@/app/admin/consulta/actions';
 import Image from 'next/image';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -75,8 +75,79 @@ const EditIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+// --- Sub-componente: Editor de Stock inline ---
+type StockSaveState = 'idle' | 'saving' | 'success' | 'error';
+
+function StockEditor({ inventoryId, initialStock, onStockChange }: { inventoryId: string; initialStock: number; onStockChange: (newStock: number) => void }) {
+    const [localStock, setLocalStock] = useState(initialStock);
+    const [inputValue, setInputValue] = useState(String(initialStock));
+    const [saveState, setSaveState] = useState<StockSaveState>('idle');
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const commit = async () => {
+        const parsed = parseInt(inputValue, 10);
+        if (isNaN(parsed) || parsed < 0 || parsed === localStock) {
+            setInputValue(String(localStock)); // revertir si inválido o sin cambio
+            return;
+        }
+        setSaveState('saving');
+        const result = await updateInventoryStock(inventoryId, parsed);
+        if (result.success) {
+            setLocalStock(parsed);
+            onStockChange(parsed);
+            setSaveState('success');
+            timerRef.current = setTimeout(() => setSaveState('idle'), 1800);
+        } else {
+            setInputValue(String(localStock)); // revertir
+            setSaveState('error');
+            timerRef.current = setTimeout(() => setSaveState('idle'), 2500);
+        }
+    };
+
+    useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+    const textColor = localStock > 0 ? 'text-green-600' : 'text-red-600';
+    const ringColor =
+        saveState === 'success' ? 'ring-2 ring-green-400' :
+        saveState === 'error'   ? 'ring-2 ring-red-400'   :
+        'ring-1 ring-gray-300 focus:ring-2 focus:ring-indigo-500';
+
+    return (
+        <div className="mt-1 flex items-center gap-2">
+            <input
+                type="number"
+                min={0}
+                value={inputValue}
+                disabled={saveState === 'saving'}
+                onChange={e => setInputValue(e.target.value)}
+                onFocus={e => e.target.select()}
+                onBlur={commit}
+                onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
+                className={`w-20 text-lg font-semibold rounded-md px-2 py-0.5 bg-transparent border-0 outline-none transition-all ${textColor} ${ringColor} disabled:opacity-60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+            />
+            <span className="text-sm text-gray-400">un.</span>
+            {saveState === 'saving' && (
+                <svg className="animate-spin h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+            )}
+            {saveState === 'success' && (
+                <svg className="h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/>
+                </svg>
+            )}
+            {saveState === 'error' && (
+                <svg className="h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd"/>
+                </svg>
+            )}
+        </div>
+    );
+}
+
 // --- Componente de la Tarjeta de Producto ---
-function ProductCard({ product }: { product: ProductDetails }) {
+function ProductCard({ product, onStockChange }: { product: ProductDetails; onStockChange: (newStock: number) => void }) {
     return (
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-3">
@@ -121,9 +192,7 @@ function ProductCard({ product }: { product: ProductDetails }) {
                             </div>
                             <div className="col-span-1">
                                 <dt className="text-sm font-medium text-gray-500">Stock</dt>
-                                <dd className={`mt-1 text-lg font-semibold ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {product.stock} unidades
-                                </dd>
+                                <StockEditor inventoryId={product.inventory_id} initialStock={product.stock} onStockChange={onStockChange} />
                             </div>
                             <div className="col-span-2">
                                 <dt className="text-sm font-medium text-gray-500">Precio</dt>
@@ -140,8 +209,8 @@ function ProductCard({ product }: { product: ProductDetails }) {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
-                .animate-fade-in { 
-                    animation: fade-in 0.5s ease-out forwards; 
+                .animate-fade-in {
+                    animation: fade-in 0.5s ease-out forwards;
                 }
             `}</style>
         </div>
@@ -508,7 +577,16 @@ export default function ConsultaPage() {
                     {mode === 'consulta' && !isPending && !error && searchResult && (
                         <>
                             {searchResult.type === 'product' && (
-                                <ProductCard product={searchResult.data as ProductDetails} />
+                                <ProductCard
+                                    product={searchResult.data as ProductDetails}
+                                    onStockChange={(newStock) =>
+                                        setSearchResult(prev =>
+                                            prev && prev.type === 'product'
+                                                ? { ...prev, data: { ...(prev.data as ProductDetails), stock: newStock } }
+                                                : prev
+                                        )
+                                    }
+                                />
                             )}
                             {searchResult.type === 'order' && (
                                 <OrderCard order={searchResult.data as OrderDetails} />

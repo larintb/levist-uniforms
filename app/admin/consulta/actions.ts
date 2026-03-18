@@ -121,6 +121,33 @@ export async function updateInventoryItemPrice(inventoryId: string, newPrice: nu
     }
 }
 
+export async function updateInventoryStock(inventoryId: string, newStock: number): Promise<{ success: boolean; message: string }> {
+    if (!inventoryId || newStock === undefined || newStock < 0 || !Number.isInteger(newStock)) {
+        return { success: false, message: "Datos inválidos para actualizar el stock." };
+    }
+
+    const supabase = await createClient();
+
+    try {
+        const { error } = await supabase
+            .from('inventory')
+            .update({ stock: newStock })
+            .eq('id', inventoryId);
+
+        if (error) {
+            console.error("Error updating stock:", error);
+            throw new Error("No se pudo actualizar el stock en la base de datos.");
+        }
+
+        return { success: true, message: "Stock actualizado correctamente." };
+
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Error desconocido al actualizar el stock.";
+        console.error('Error en updateInventoryStock:', message);
+        return { success: false, message: "Error al conectar con la base de datos." };
+    }
+}
+
 function isUUID(term: string): boolean {
     const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     return uuidRegex.test(term);
