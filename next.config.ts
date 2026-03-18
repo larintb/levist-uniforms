@@ -11,6 +11,11 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', '*.app.github.dev'],
+    },
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
