@@ -52,8 +52,21 @@ type SearchResultData = {
     data: ProductDetails | OrderDetails;
 };
 
+// --- Tipo para items de auditoría ---
+type AuditItem = {
+    inventory_id: string;
+    product_name: string;
+    sku: string;
+    color: string;
+    size: string;
+    barcode: string;
+    image_url: string | null;
+    stock_sistema: number;
+    conteo_fisico: number;
+};
+
 // --- Nuevo tipo para el modo de la página ---
-type PageMode = 'consulta' | 'entrada';
+type PageMode = 'consulta' | 'entrada' | 'auditoria';
 
 // --- Icono de Editar ---
 const EditIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -272,12 +285,14 @@ export default function ConsultaPage() {
     const [wasSearched, setWasSearched] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // --- Nuevos estados para el modo de entrada de inventario ---
+    // --- Estados para el modo de entrada de inventario ---
     const [mode, setMode] = useState<PageMode>('consulta');
     const [scannedProducts, setScannedProducts] = useState<ProductDetails[]>([]);
     const [entrySuccess, setEntrySuccess] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // --- Estados para el modo de auditoría ---
+    const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
 
     useEffect(() => {
         inputRef.current?.focus();
@@ -306,7 +321,7 @@ export default function ConsultaPage() {
                 } else {
                     setError(result.message || "No se encontró un resultado.");
                 }
-            } else { // modo 'entrada'
+            } else if (mode === 'entrada') {
                 if (result.success && result.type === 'product' && result.data) {
                     const product = result.data as ProductDetails;
                     if (scannedProducts.length < 20) {
@@ -317,7 +332,37 @@ export default function ConsultaPage() {
                 } else {
                     setError(result.message || "Producto no encontrado o código no válido.");
                 }
+            } else { // modo 'auditoria'
+                if (result.success && result.type === 'product' && result.data) {
+                    const product = result.data as ProductDetails;
+                    setAuditItems(prev => {
+                        const existing = prev.find(item => item.inventory_id === product.inventory_id);
+                        if (existing) {
+                            return prev.map(item =>
+                                item.inventory_id === product.inventory_id
+                                    ? { ...item, conteo_fisico: item.conteo_fisico + 1 }
+                                    : item
+                            );
+                        }
+                        return [{
+                            inventory_id: product.inventory_id,
+                            product_name: product.product_name,
+                            sku: product.sku,
+                            color: product.color,
+                            size: product.size,
+                            barcode: product.barcode,
+                            image_url: product.image_url,
+                            stock_sistema: product.stock,
+                            conteo_fisico: 1,
+                        }, ...prev];
+                    });
+                } else {
+                    setError(result.message || "Producto no encontrado.");
+                }
             }
+
+            // Re-enfocar el input tras cada escaneo
+            inputRef.current?.focus();
         });
         // Limpiar el input después de cada escaneo
         if (inputRef.current) {
@@ -385,7 +430,9 @@ export default function ConsultaPage() {
                 <p className="text-gray-600 mt-2">
                     {mode === 'consulta'
                         ? "Escanea un código de barras de producto o un código QR de orden para ver detalles."
-                        : "Escanea productos para registrarlos en el inventario."}
+                        : mode === 'entrada'
+                        ? "Escanea productos para registrarlos en el inventario."
+                        : "Escanea productos para validar el conteo físico contra el stock del sistema."}
                 </p>
             </header>
 
@@ -403,6 +450,12 @@ export default function ConsultaPage() {
                 >
                     Entrada de Inventario
                 </button>
+                <button
+                    onClick={() => { setMode('auditoria'); setAuditItems([]); setError(null); }}
+                    className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'auditoria' ? 'bg-white text-indigo-600 shadow' : 'text-gray-600 hover:bg-gray-300'}`}
+                >
+                    Auditoría
+                </button>
             </div>
 
             <main>
@@ -415,7 +468,7 @@ export default function ConsultaPage() {
                         type="text"
                         name="barcode"
                         id="barcode-input"
-                        placeholder={mode === 'consulta' ? "Escanear código de producto u orden..." : "Escanear producto para agregar..."}
+                        placeholder={mode === 'consulta' ? "Escanear código de producto u orden..." : mode === 'entrada' ? "Escanear producto para agregar..." : "Escanear producto para auditar..."}
                         className="text-gray-600 w-full pl-12 pr-32 py-4 text-lg bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-gray-600"
                         autoComplete="off"
                     />
@@ -539,6 +592,103 @@ export default function ConsultaPage() {
                                     )}
                                 </ul>
                             </div>
+                        </div>
+                    )}
+                    {/* --- VISTA DE AUDITORÍA --- */}
+                    {mode === 'auditoria' && (
+                        <div className="mt-8">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold text-gray-800">
+                                    Auditoría de Inventario
+                                    {auditItems.length > 0 && (
+                                        <span className="ml-2 text-sm font-normal text-gray-500">
+                                            ({auditItems.length} producto{auditItems.length !== 1 ? 's' : ''})
+                                        </span>
+                                    )}
+                                </h2>
+                                {auditItems.length > 0 && (
+                                    <button
+                                        onClick={() => { setAuditItems([]); setError(null); }}
+                                        className="text-sm text-red-500 hover:text-red-700 font-medium"
+                                    >
+                                        Limpiar todo
+                                    </button>
+                                )}
+                            </div>
+
+                            {auditItems.length === 0 ? (
+                                <div className="bg-white rounded-xl shadow-md p-10 text-center text-gray-500">
+                                    <svg className="mx-auto h-12 w-12 text-gray-300 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+                                    </svg>
+                                    <p>Escanea el primer producto para iniciar la auditoría.</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                                    <ul className="divide-y divide-gray-100">
+                                        {auditItems.map((item) => {
+                                            const isExact = item.conteo_fisico === item.stock_sistema;
+                                            const isOver = item.conteo_fisico > item.stock_sistema;
+                                            const counterColor = isOver
+                                                ? 'text-red-600 bg-red-50 border-red-200'
+                                                : isExact
+                                                ? 'text-green-600 bg-green-50 border-green-200'
+                                                : 'text-gray-700 bg-gray-50 border-gray-200';
+                                            const counterLabel = isOver ? 'Excede' : isExact ? 'Coincide' : 'Contando...';
+
+                                            return (
+                                                <li key={item.inventory_id} className="p-4 flex items-center gap-4">
+                                                    <Image
+                                                        src={item.image_url || 'https://placehold.co/56x56/f8f9fa/e9ecef?text=?'}
+                                                        alt={item.product_name}
+                                                        width={56}
+                                                        height={56}
+                                                        className="rounded-lg object-cover flex-shrink-0 bg-gray-100"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-gray-900 truncate">{item.product_name}</p>
+                                                        <p className="text-sm text-gray-500">{item.sku} · {item.color} / {item.size}</p>
+                                                        <p className="text-xs text-gray-400 font-mono mt-0.5">{item.barcode}</p>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                                        <div className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 font-bold text-lg tabular-nums ${counterColor}`}>
+                                                            <span>{item.conteo_fisico}</span>
+                                                            <span className="text-sm font-normal opacity-60">/</span>
+                                                            <span>{item.stock_sistema}</span>
+                                                        </div>
+                                                        <span className={`text-xs font-medium ${isOver ? 'text-red-500' : isExact ? 'text-green-500' : 'text-gray-400'}`}>
+                                                            {counterLabel}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setAuditItems(prev => prev.filter(i => i.inventory_id !== item.inventory_id))}
+                                                        className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 ml-1"
+                                                        title="Quitar de la auditoría"
+                                                    >
+                                                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+
+                                    {/* Resumen de auditoría */}
+                                    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50 flex gap-4 text-sm">
+                                        <span className="text-green-600 font-medium">
+                                            ✓ {auditItems.filter(i => i.conteo_fisico === i.stock_sistema).length} coinciden
+                                        </span>
+                                        <span className="text-red-500 font-medium">
+                                            ↑ {auditItems.filter(i => i.conteo_fisico > i.stock_sistema).length} exceden
+                                        </span>
+                                        <span className="text-gray-400 font-medium">
+                                            ◷ {auditItems.filter(i => i.conteo_fisico < i.stock_sistema).length} pendientes
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
