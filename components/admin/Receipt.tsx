@@ -215,7 +215,7 @@ interface WorkOrderTicketProps {
 }
 
 const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
-    <div className="bg-white text-black p-1" style={{ fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}>
+    <div className="bg-white text-black p-1" style={{ fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>
         <header className="text-center mb-1">
             <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
             <h1 className="text-sm font-bold">Orden de Trabajo</h1>
@@ -223,8 +223,10 @@ const WorkOrderTicket = ({ details }: WorkOrderTicketProps) => (
         </header>
         <section className="my-1 space-y-0.5 leading-tight">
             <p className="font-black text-xs"><b>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-            <p className="font-black text-xs"><b>CLIENTE:</b></p>
-            <p className="font-black text-xs pl-2">{details.customer_name}</p>
+            <div className="my-1 p-1 border-2 border-black rounded-sm bg-gray-100">
+                <p className="text-center font-black text-xs uppercase">CLIENTE:</p>
+                <p className="text-center font-black text-sm uppercase">{details.customer_name || 'MOSTRADOR'}</p>
+            </div>
             {details.school_name && <p className="font-black text-xs"><b>Escuela:</b> {details.school_name}</p>}
         </section>
         {details.embroidery_notes && (
@@ -278,7 +280,7 @@ export function Receipt({ details }: ReceiptProps) {
                     body * { visibility: hidden; }
                     .printable-area, .printable-area * { visibility: visible; }
                     html, body { margin: 0 !important; padding: 0 !important; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .printable-area { position: absolute; left: 0; top: 0; width: 48mm; height: auto; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif; font-size: 8pt; color: #000; background: #fff; }
+                    .printable-area { position: absolute; left: 0; top: 0; width: 48mm; height: auto; font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif; font-size: 8pt; color: #000; background: #fff; }
                     .no-print { display: none !important; }
                     .cut-line { page-break-after: always; page-break-inside: avoid; }
                 }
