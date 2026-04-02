@@ -155,8 +155,10 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
                     <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
                     <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>CLIENTE:</b></p>
-                    <p className="font-black text-xs pl-2" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}>{details.customer_name || 'MOSTRADOR'}</p>
+                    <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50" style={{ fontWeight: '700' }}>
+                        <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}>NOMBRE DEL CLIENTE:</p>
+                        <p className="text-center font-black text-sm" style={{ fontWeight: '700', color: '#000', fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif' }}>{details.customer_name || 'MOSTRADOR'}</p>
+                    </section>
                 </section>
 
                 {/* Sección destacada para la escuela */}

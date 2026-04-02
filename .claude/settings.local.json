@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(npm audit:*)",
+      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(''next:'', p.dependencies.next, ''\\\\nsupabase:'', p.dependencies[''@supabase/supabase-js''], ''\\\\nsupabase-cli:'', p.devDependencies?.supabase\\)\")",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
