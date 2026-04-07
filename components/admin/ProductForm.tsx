@@ -426,7 +426,7 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
                             <label className="sm:hidden text-xs font-medium text-gray-500">Precio</label>
                             <input 
                                 type="number" 
-                                step="0.01" 
+                                step="1"
                                 placeholder="0.00" 
                                 value={inv.price} 
                                 onChange={(e) => handleInventoryChange(variant.id, inv.id, 'price', Number(e.target.value))}

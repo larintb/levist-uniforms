@@ -648,7 +648,7 @@ export default function ConsultaPage() {
                                                                 );
                                                             }}
                                                             className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900"
-                                                            step="0.01"
+                                                            step="1"
                                                         />
                                                     </div>
                                                 </div>

@@ -404,7 +404,7 @@ const PosCart = forwardRef<PosCartRef, {
                                         onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))} 
                                         className="text-black w-16 sm:w-20 p-1.5 sm:p-2 text-right font-semibold border border-gray-300 rounded-md text-xs sm:text-sm"
                                         min="0"
-                                        step="0.01"
+                                        step="1"
                                     />
                                 </div>
                             </div>
@@ -445,7 +445,7 @@ const PosCart = forwardRef<PosCartRef, {
                                         className="text-black w-20 sm:w-24 p-1.5 sm:p-2 text-right font-bold border border-blue-300 rounded-md text-xs sm:text-sm"
                                         max={total}
                                         min={0}
-                                        step="0.01"
+                                        step="1"
                                     />
                                 </div>
                             </div>

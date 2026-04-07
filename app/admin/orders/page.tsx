@@ -45,6 +45,7 @@ type Order = {
     is_layaway: boolean;
     down_payment: number;
     remaining_balance: number;
+    encargo_id: string | null;
     items: OrderItem[];
 };
 
@@ -67,6 +68,7 @@ type OrderViewRow = {
     is_layaway: boolean;
     down_payment: number;
     remaining_balance: number;
+    encargo_id: string | null;
     item_id: string;
     product_name: string;
     sku: string;
@@ -541,8 +543,16 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
                 <div className="bg-white p-5 rounded-xl shadow-sm ring-1 ring-gray-900/5">
                     <h3 className="text-base font-semibold text-gray-900 mb-4">Resumen de la Orden</h3>
                     <div className="space-y-3 text-sm">
+                        {order.encargo_id && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-600">Origen:</span>
+                                <a href={`/admin/encargos/${order.encargo_id}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 text-xs font-bold rounded-full ring-1 ring-inset bg-purple-100 text-purple-800 ring-purple-600/20 hover:bg-purple-200 transition-colors">
+                                    📦 Encargo #{order.encargo_id.slice(0, 8)}
+                                </a>
+                            </div>
+                        )}
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-600">Estados:</span> 
+                            <span className="text-gray-600">Estados:</span>
                             <MultipleStatusBadges statuses={order.active_statuses} />
                         </div>
                         <div className="flex justify-between items-center"><span className="text-gray-600">Fecha:</span> <span className="font-medium text-gray-800">{new Date(order.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</span></div>
@@ -913,6 +923,7 @@ export default function OrdersInteractivePage() {
                     is_layaway: row.is_layaway,
                     down_payment: row.down_payment,
                     remaining_balance: row.remaining_balance,
+                    encargo_id: row.encargo_id ?? null,
                     items: [],
                 });
             }
