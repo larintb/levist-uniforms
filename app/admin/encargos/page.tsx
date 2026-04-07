@@ -171,23 +171,26 @@ const CheckoutModal = ({
 }: {
     encargo: Encargo;
     onClose: () => void;
-    onConfirm: (data: { paymentMethod: string; isLayaway: boolean; downPayment: number }) => void;
+    onConfirm: (data: { paymentMethod: string; isLayaway: boolean; downPayment: number; discountAmount: number; discountReason: string }) => void;
     isProcessing: boolean;
 }) => {
-    const total = encargo.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const subtotal = encargo.items.reduce((s, i) => s + i.price * i.quantity, 0);
     const depositPaid = encargo.deposit;
-    const pendingBalance = total - depositPaid;
 
     const [paymentMethod, setPaymentMethod] = useState("Efectivo");
     const [isLayaway, setIsLayaway] = useState(false);
     const [additionalDeposit, setAdditionalDeposit] = useState(0);
+    const [discountAmount, setDiscountAmount] = useState(0);
+    const [discountReason, setDiscountReason] = useState("");
 
+    const total = Math.max(0, subtotal - discountAmount);
+    const pendingBalance = Math.max(0, total - depositPaid);
     const finalDownPayment = depositPaid + (isLayaway ? additionalDeposit : pendingBalance);
     const finalRemaining = isLayaway ? pendingBalance - additionalDeposit : 0;
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-start justify-between mb-4">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900">Cobrar Encargo</h2>
@@ -211,8 +214,8 @@ const CheckoutModal = ({
                 {/* Amounts */}
                 <div className="space-y-1.5 mb-5 border-t border-gray-100 pt-3">
                     <div className="flex justify-between text-sm text-gray-600">
-                        <span>Total:</span>
-                        <span className="font-semibold text-gray-800">${total.toFixed(2)}</span>
+                        <span>Subtotal:</span>
+                        <span className="font-semibold text-gray-800">${subtotal.toFixed(2)}</span>
                     </div>
                     {depositPaid > 0 && (
                         <div className="flex justify-between text-sm text-gray-600">
@@ -220,6 +223,36 @@ const CheckoutModal = ({
                             <span className="font-semibold text-emerald-700">−${depositPaid.toFixed(2)}</span>
                         </div>
                     )}
+
+                    {/* Discount input */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Descuento <span className="font-normal text-gray-400 normal-case">(opcional)</span></p>
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center bg-white border border-gray-300 rounded-lg px-2 py-1.5 w-28">
+                                <span className="text-xs text-gray-400 mr-1">$</span>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={subtotal}
+                                    step={1}
+                                    value={discountAmount}
+                                    onChange={(e) => setDiscountAmount(Math.min(parseFloat(e.target.value) || 0, subtotal))}
+                                    className="flex-1 text-sm font-semibold text-gray-800 bg-transparent outline-none w-0 min-w-0"
+                                />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Razón del descuento..."
+                                value={discountReason}
+                                onChange={(e) => setDiscountReason(e.target.value)}
+                                className="flex-1 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg px-2 py-1.5 outline-none focus:border-gray-400 transition"
+                            />
+                        </div>
+                        {discountAmount > 0 && (
+                            <p className="text-xs text-emerald-700 font-semibold">−${discountAmount.toFixed(2)} aplicado</p>
+                        )}
+                    </div>
+
                     <div className="flex justify-between text-base font-bold border-t border-gray-200 pt-2 mt-1">
                         <span className="text-gray-900">Saldo a cobrar:</span>
                         <span className="text-gray-900">${pendingBalance.toFixed(2)}</span>
@@ -274,7 +307,7 @@ const CheckoutModal = ({
                         Cancelar
                     </button>
                     <button
-                        onClick={() => onConfirm({ paymentMethod, isLayaway, downPayment: finalDownPayment })}
+                        onClick={() => onConfirm({ paymentMethod, isLayaway, downPayment: finalDownPayment, discountAmount, discountReason })}
                         disabled={isProcessing}
                         className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors"
                     >
@@ -307,6 +340,8 @@ export default function EncargosPage() {
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const [embroideryNotes, setEmbroideryNotes] = useState("");
     const [deposit, setDeposit] = useState(0);
+    const [discount, setDiscount] = useState(0);
+    const [discountReason, setDiscountReason] = useState("");
     const [isCreating, startCreating] = useTransition();
     const searchRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -424,7 +459,8 @@ export default function EncargosPage() {
         setCart((prev) => prev.map((i) => (i.inventory_id === inventory_id ? { ...i, quantity } : i)));
     };
 
-    const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const cartSubtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const cartTotal = Math.max(0, cartSubtotal - discount);
 
     // --- Create Encargo ---
     const handleCreateEncargo = () => {
@@ -439,6 +475,8 @@ export default function EncargosPage() {
                 embroideryNotes: embroideryNotes.trim(),
                 notes: "",
                 deposit,
+                discount,
+                discountReason: discountReason.trim(),
                 items: cart.map((i) => ({ inventory_id: i.inventory_id, quantity: i.quantity, price: i.price })),
             };
 
@@ -451,6 +489,8 @@ export default function EncargosPage() {
                 setSchoolId(null);
                 setEmbroideryNotes("");
                 setDeposit(0);
+                setDiscount(0);
+                setDiscountReason("");
                 setSearchQuery("");
                 router.push(`/admin/encargos/${result.encargoId}`);
             } else {
@@ -460,9 +500,10 @@ export default function EncargosPage() {
     };
 
     // --- Fulfill ---
-    const handleFulfill = ({ paymentMethod, isLayaway, downPayment }: { paymentMethod: string; isLayaway: boolean; downPayment: number }) => {
+    const handleFulfill = ({ paymentMethod, isLayaway, downPayment, discountAmount, discountReason }: { paymentMethod: string; isLayaway: boolean; downPayment: number; discountAmount: number; discountReason: string }) => {
         if (!checkoutEncargo) return;
-        const total = checkoutEncargo.items.reduce((s, i) => s + i.price * i.quantity, 0);
+        const subtotal = checkoutEncargo.items.reduce((s, i) => s + i.price * i.quantity, 0);
+        const total = Math.max(0, subtotal - discountAmount);
         const remaining = isLayaway ? total - downPayment : 0;
 
         startFulfilling(async () => {
@@ -470,9 +511,9 @@ export default function EncargosPage() {
                 encargoId: checkoutEncargo.id,
                 paymentMethod,
                 total,
-                subtotal: total,
-                discountAmount: 0,
-                discountReason: "",
+                subtotal,
+                discountAmount,
+                discountReason,
                 isLayaway,
                 downPayment,
                 remainingBalance: remaining,
@@ -640,7 +681,19 @@ export default function EncargosPage() {
                                                     </div>
                                                 </div>
                                             ))}
-                                            <div className="flex justify-between items-center px-1 pt-1">
+                                            {discount > 0 && (
+                                                <div className="flex justify-between items-center px-1 pt-1 text-sm text-gray-400">
+                                                    <span>Subtotal</span>
+                                                    <span>${cartSubtotal.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            {discount > 0 && (
+                                                <div className="flex justify-between items-center px-1 text-sm text-emerald-600">
+                                                    <span>Descuento</span>
+                                                    <span>−${discount.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between items-center px-1 pt-1 border-t border-gray-100">
                                                 <span className="text-sm text-gray-500">Total estimado</span>
                                                 <span className="text-base font-bold text-gray-900">${cartTotal.toFixed(2)}</span>
                                             </div>
@@ -719,6 +772,30 @@ export default function EncargosPage() {
                                         value={deposit}
                                         onChange={(e) => setDeposit(parseFloat(e.target.value) || 0)}
                                         className="flex-1 text-sm text-gray-800 bg-transparent outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500 block mb-1.5">Descuento <span className="font-normal text-gray-400">(opcional)</span></label>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-900/10 transition w-28">
+                                        <span className="text-sm text-gray-400 mr-1.5">$</span>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step={1}
+                                            value={discount}
+                                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                            className="flex-1 text-sm text-gray-800 bg-transparent outline-none w-0 min-w-0"
+                                        />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Razón..."
+                                        value={discountReason}
+                                        onChange={(e) => setDiscountReason(e.target.value)}
+                                        className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 outline-none transition"
                                     />
                                 </div>
                             </div>

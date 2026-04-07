@@ -25,6 +25,8 @@ export type Encargo = {
     customer_phone: string | null;
     embroidery_notes: string | null;
     deposit: number;
+    discount: number;
+    discount_reason: string | null;
     status: "PENDING" | "FULFILLED" | "CANCELLED";
     fulfilled_at: string | null;
     fulfilled_order_id: string | null;
@@ -41,6 +43,8 @@ type EncargoViewRow = {
     customer_phone: string | null;
     embroidery_notes: string | null;
     deposit: number;
+    discount: number;
+    discount_reason: string | null;
     encargo_status: string;
     fulfilled_at: string | null;
     fulfilled_order_id: string | null;
@@ -65,6 +69,8 @@ export type CreateEncargoPayload = {
     embroideryNotes: string;
     notes: string;
     deposit: number;
+    discount: number;
+    discountReason: string;
     items: { inventory_id: string; quantity: number; price: number }[];
 };
 
@@ -160,6 +166,8 @@ export async function createEncargoAction(
         p_embroidery_notes: payload.embroideryNotes || null,
         p_notes: payload.notes || null,
         p_deposit: payload.deposit,
+        p_discount: payload.discount,
+        p_discount_reason: payload.discountReason || null,
         p_items: payload.items,
     });
 
@@ -204,6 +212,8 @@ export async function getEncargos(
                 customer_phone: row.customer_phone,
                 embroidery_notes: row.embroidery_notes,
                 deposit: row.deposit,
+                discount: row.discount,
+                discount_reason: row.discount_reason,
                 status: row.encargo_status as "PENDING" | "FULFILLED" | "CANCELLED",
                 fulfilled_at: row.fulfilled_at,
                 fulfilled_order_id: row.fulfilled_order_id,

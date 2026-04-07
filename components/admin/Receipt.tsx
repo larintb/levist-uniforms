@@ -168,8 +168,8 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
 
             {details.is_layaway && (
                 <div className="border-t border-dashed border-black mt-1.5 pt-1.5">
-                    <div className="text-center text-sm font-bold mb-1 bg-blue-50 p-1 rounded">
-                        🏦 SEPARADO
+                    <div className="text-center font-black text-white text-sm mt-1 p-1 bg-black rounded">
+                        SEPARADO
                     </div>
                     <div className="flex justify-between font-black text-sm">
                         <span>Anticipo Pagado:</span>
@@ -180,8 +180,8 @@ const CustomerTicket = ({ title, details, isSpecialOrder, needsInvoice, subtotal
                         <span className="font-bold">${details.remaining_balance.toFixed(2)}</span>
                     </div>
                     {details.remaining_balance > 0 && (
-                        <div className="text-center font-black text-sm mt-1 p-1 bg-yellow-50 rounded">
-                            ⚠️ RECUERDE COMPLETAR EL PAGO
+                        <div className="text-center font-black text-white text-sm mt-1 p-1 bg-black rounded">
+                            RECUERDE COMPLETAR EL PAGO
                         </div>
                     )}
                 </div>

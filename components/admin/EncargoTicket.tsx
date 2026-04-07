@@ -37,7 +37,9 @@ const PrintIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function EncargoTicket({ encargo }: EncargoTicketProps) {
-    const total = encargo.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = encargo.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const discount = encargo.discount ?? 0;
+    const total = Math.max(0, subtotal - discount);
     const remaining = total - encargo.deposit;
 
     return (
@@ -108,9 +110,9 @@ export function EncargoTicket({ encargo }: EncargoTicketProps) {
                     {encargo.items.map((item, idx) => (
                         <div key={idx} className="mb-1.5">
                             <div className="font-black text-xs">{item.quantity}x {item.product_name}</div>
-                            <div className="font-black text-[10px] text-gray-600">{item.size} | {item.color}</div>
+                            <div className="font-black text-[10px] text-black">{item.size} | {item.color}</div>
                             <div className="flex justify-between font-black text-xs mt-0.5">
-                                <span className="text-[10px] text-gray-500">${item.price.toFixed(2)}</span>
+                                <span className="text-[10px] text-black">${item.price.toFixed(2)}</span>
                                 <span>${(item.price * item.quantity).toFixed(2)}</span>
                             </div>
                         </div>
@@ -118,8 +120,20 @@ export function EncargoTicket({ encargo }: EncargoTicketProps) {
                 </section>
 
                 <section className="mt-1 space-y-0.5">
+                    {discount > 0 && (
+                        <div className="flex justify-between font-black text-xs">
+                            <span>Subtotal:</span>
+                            <span>${subtotal.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {discount > 0 && (
+                        <div className="flex justify-between font-black text-xs">
+                            <span>Descuento{encargo.discount_reason ? ` (${encargo.discount_reason})` : ""}:</span>
+                            <span>-${discount.toFixed(2)}</span>
+                        </div>
+                    )}
                     <div className="flex justify-between font-bold text-sm border-t border-dashed border-black pt-1">
-                        <span>TOTAL ESTIMADO:</span>
+                        <span>TOTAL:</span>
                         <span>${total.toFixed(2)}</span>
                     </div>
                     {encargo.deposit > 0 && (
@@ -137,7 +151,7 @@ export function EncargoTicket({ encargo }: EncargoTicketProps) {
                 </section>
 
                 <footer className="mt-2 pt-1 border-t border-dashed border-black flex flex-col items-center text-center">
-                    <p className="font-black text-[10px] text-gray-600 mb-1">Producto pendiente de llegada</p>
+                    <p className="font-black text-[10px] text-black mb-1">Producto pendiente de llegada</p>
                     <p className="font-black text-xs mb-1">¡Gracias por su preferencia!</p>
                     <div className="w-20 h-20 bg-white p-0.5">
                         <QRCode

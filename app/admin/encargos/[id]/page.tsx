@@ -10,6 +10,8 @@ type EncargoViewRow = {
     customer_phone: string | null;
     embroidery_notes: string | null;
     deposit: number;
+    discount: number;
+    discount_reason: string | null;
     encargo_status: string;
     fulfilled_at: string | null;
     fulfilled_order_id: string | null;
@@ -50,6 +52,8 @@ export default async function EncargoTicketPage({ params }: { params: Promise<{ 
         customer_phone: first.customer_phone,
         embroidery_notes: first.embroidery_notes,
         deposit: first.deposit,
+        discount: first.discount,
+        discount_reason: first.discount_reason,
         status: first.encargo_status as "PENDING" | "FULFILLED" | "CANCELLED",
         fulfilled_at: first.fulfilled_at,
         fulfilled_order_id: first.fulfilled_order_id,

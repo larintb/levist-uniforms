@@ -100,17 +100,17 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     body * { visibility: hidden; }
                     .work-order-printable, .work-order-printable * { visibility: visible; }
                     html, body { margin: 0 !important; padding: 0 !important; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .work-order-printable { 
-                        position: absolute; 
-                        left: 0; 
-                        top: 0; 
-                        width: 48mm; 
-                        height: auto; 
-                        font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif; 
-                        font-size: 8pt; 
-                        color: #000 !important; 
-                        background: #fff; 
-                        font-weight: 700 !important; 
+                    .work-order-printable {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 80mm;
+                        height: auto;
+                        font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif;
+                        font-size: 8pt;
+                        color: #000 !important;
+                        background: #fff;
+                        font-weight: 700 !important;
                     }
                     .work-order-printable * { 
                         font-weight: 700 !important; 
@@ -137,12 +137,12 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     .no-print { display: none !important; }
                 }
                 @page {
-                    size: 48mm auto;
+                    size: 80mm auto;
                     margin: 0;
                 }
             `}</style>
 
-            <div className="bg-white text-black p-1 max-w-[48mm] mx-auto work-order-printable font-black" style={{ fontWeight: '700', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>
+            <div className="bg-white text-black p-1 max-w-[80mm] mx-auto work-order-printable font-black" style={{ fontWeight: '700', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>
                 <header className="text-center mb-1" style={{ fontWeight: '700' }}>
                     <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
                     <h1 className="text-sm font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>Levist Uniforms</h1>
@@ -157,7 +157,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                     <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>Vendedor:</b> {details.seller_name || 'N/A'}</p>
                     <section className="my-1 p-1 border-2 border-black rounded-sm bg-gray-100" style={{ fontWeight: '700' }}>
                         <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>CLIENTE:</p>
-                        <p className="text-center font-black text-sm uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.customer_name || 'MOSTRADOR'}</p>
+                        <p className="text-center font-black text-sm" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.customer_name || 'MOSTRADOR'}</p>
                     </section>
                 </section>
 
@@ -165,7 +165,7 @@ function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
                 {details.school_name && (
                     <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50" style={{ fontWeight: '700' }}>
                         <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>ESCUELA:</p>
-                        <p className="text-center font-black text-sm uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.school_name}</p>
+                        <p className="text-center font-black text-sm" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.school_name}</p>
                     </section>
                 )}
 
