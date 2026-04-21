@@ -10,7 +10,9 @@
       "Bash(pnpm build:*)",
       "Bash(cat app/admin/encargos/*.tsx)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm lint *)"
     ]
   }
 }

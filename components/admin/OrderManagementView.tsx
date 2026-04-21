@@ -4,7 +4,6 @@ import React, { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { updateOrderMultipleStatuses } from '@/app/admin/orders/multiple-status-actions';
 import { updateItemDeliveryStatus, updateAllItemsDeliveryStatus } from '@/app/admin/orders/actions';
-import { sendWhatsAppNotification } from '@/app/admin/orders/[id]/actions';
 import { MultiCopyPrintButton } from './MultiCopyPrintButton';
 
 // Tipo de datos para gestión de orden
@@ -59,12 +58,6 @@ const PrinterIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-    </svg>
-);
-
-const PhoneIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
     </svg>
 );
 
@@ -131,8 +124,6 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
     
-    const [whatsappMessage, setWhatsappMessage] = useState('');
-
     // Inicializar estados solo una vez cuando el componente se monta
     useEffect(() => {
         if (!isInitialized) {
@@ -226,29 +217,6 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
             } catch (error) {
                 console.error('Error updating all items delivery:', error);
                 setMessage({ type: 'error', text: 'Error al actualizar el estado de entrega de todos los ítems' });
-            }
-        });
-    };
-
-    const handleSendWhatsApp = () => {
-        if (!whatsappMessage.trim() || !orderDetails.customer_phone) return;
-        
-        startTransition(async () => {
-            try {
-                const result = await sendWhatsAppNotification(
-                    orderDetails.customer_phone!, 
-                    orderDetails.customer_name || 'Cliente', 
-                    orderDetails.order_id
-                );
-                if (result.success) {
-                    setMessage({ type: 'success', text: 'Notificación enviada exitosamente' });
-                    setWhatsappMessage('');
-                } else {
-                    setMessage({ type: 'error', text: result.message });
-                }
-            } catch (error) {
-                console.error('Error sending WhatsApp:', error);
-                setMessage({ type: 'error', text: 'Error al enviar la notificación de WhatsApp' });
             }
         });
     };
@@ -594,37 +562,6 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
                             </button>
                         </div>
 
-                        {/* WhatsApp Notifications */}
-                        {orderDetails.customer_phone && (
-                            <div className="bg-white shadow rounded-lg p-6">
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                    <PhoneIcon className="inline h-5 w-5 mr-2 text-green-600" />
-                                    Notificar Cliente
-                                </h3>
-                                <div className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                                    <p className="text-sm font-bold text-green-800">
-                                        📱 {orderDetails.customer_phone}
-                                    </p>
-                                    <p className="text-xs text-green-700 mt-1 font-medium">
-                                        Cliente: {orderDetails.customer_name || 'Sin nombre'}
-                                    </p>
-                                </div>
-                                <textarea
-                                    value={whatsappMessage}
-                                    onChange={(e) => setWhatsappMessage(e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-md resize-none text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                    rows={3}
-                                    placeholder="Mensaje para el cliente..."
-                                />
-                                <button
-                                    onClick={handleSendWhatsApp}
-                                    disabled={isPending || !whatsappMessage.trim()}
-                                    className="mt-3 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 font-medium transition-colors"
-                                >
-                                    {isPending ? 'Enviando...' : '📱 Enviar WhatsApp'}
-                                </button>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

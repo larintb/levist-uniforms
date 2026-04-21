@@ -5,7 +5,6 @@ import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { updateItemDeliveryStatus, updateAllItemsDeliveryStatus } from './actions';
 import { updateOrderMultipleStatuses } from './multiple-status-actions';
-import { sendWhatsAppNotification } from './[id]/actions';
 import { MultiCopyPrintButton } from '@/components/admin/MultiCopyPrintButton';
 import { getSchools } from '@/app/admin/pos/actions';
 
@@ -378,9 +377,7 @@ const OrderListColumn = ({ orders, selectedOrder, setSelectedOrder, setFilter, s
 // --- Columna Derecha: Detalle de la Orden (Diseño Mejorado) ---
 const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefresh: () => Promise<void> }) => {
     const [isUpdating, startUpdateTransition] = useTransition();
-    const [isNotifying, startNotifyTransition] = useTransition();
     const [showStatusModal, setShowStatusModal] = useState(false);
-    const [showNotifyModal, setShowNotifyModal] = useState(false);
     const [showDeliveryModal, setShowDeliveryModal] = useState(false);
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [pendingDeliveryChange, setPendingDeliveryChange] = useState<{
@@ -436,13 +433,6 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
         });
     };
 
-    const handleNotify = () => {
-        if (!order.customer_phone || !order.customer_name) { 
-            alert("Este cliente no tiene un numero de telefono o nombre para notificar."); 
-            return; 
-        }
-        setShowNotifyModal(true);
-    };
 
     const handleItemDeliveryToggle = (itemId: string, itemName: string, delivered: boolean) => {
         setPendingDeliveryChange({
@@ -488,14 +478,6 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
         }
     };
 
-    const handleConfirmNotify = () => {
-        startNotifyTransition(async () => {
-            const result = await sendWhatsAppNotification(order.customer_phone!, order.customer_name!, order.id);
-            alert(result.message);
-            setShowNotifyModal(false);
-        });
-    };
-
     const handlePrintReceipt = () => {
         window.open(`/admin/orders/${order.id}`, '_blank');
     };
@@ -528,14 +510,6 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
                         title="Actualizar Estado"
                     >
                         Estado
-                    </button>
-                    <button 
-                        onClick={handleNotify} 
-                        disabled={isNotifying || !order.customer_phone} 
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                        title="Notificar Cliente"
-                    >
-                        {isNotifying ? 'Enviando...' : 'Notificar'}
                     </button>
                 </div>
             </header>
@@ -634,36 +608,6 @@ const OrderDetailColumn = ({ order, onRefresh }: { order: Order | null, onRefres
                     </div>
                 }
             </div>
-            {showNotifyModal && 
-                <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNotifyModal(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-300 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold text-center mb-4 text-black">Confirmar Notificación</h3>
-                        <div className="mb-6 text-center">
-                            <p className="text-gray-700 mb-2">¿Deseas enviar una notificación por WhatsApp a:</p>
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <p className="font-semibold text-gray-900">{order.customer_name}</p>
-                                <p className="text-sm text-gray-600">📞 {order.customer_phone}</p>
-                                <p className="text-xs text-gray-500 mt-2">Orden: #{order.id.toUpperCase().slice(0, 8)}</p>
-                            </div>
-                        </div>
-                        <div className="flex space-x-3">
-                            <button 
-                                onClick={() => setShowNotifyModal(false)}
-                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                onClick={handleConfirmNotify}
-                                disabled={isNotifying}
-                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isNotifying ? 'Enviando...' : 'Enviar Notificación'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            }
             {showDeliveryModal && pendingDeliveryChange &&
                 <div className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowDeliveryModal(false); setPendingDeliveryChange(null); }}>
                     <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-300 p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
