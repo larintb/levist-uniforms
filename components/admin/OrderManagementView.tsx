@@ -3,7 +3,7 @@
 import React, { useState, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { updateOrderMultipleStatuses } from '@/app/admin/orders/multiple-status-actions';
-import { updateItemDeliveryStatus, updateAllItemsDeliveryStatus } from '@/app/admin/orders/actions';
+import { updateItemDeliveryStatus, updateAllItemsDeliveryStatus, completeLayawayPayment } from '@/app/admin/orders/actions';
 import { MultiCopyPrintButton } from './MultiCopyPrintButton';
 
 // Tipo de datos para gestión de orden
@@ -119,10 +119,13 @@ const getStatusColor = (status: string) => {
 export function OrderManagementView({ orderDetails }: OrderManagementViewProps) {
     const [isPending, startTransition] = useTransition();
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-    
+
     // Inicializar selectedStatuses basado en los estados activos de la orden
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
+
+    // Modal de saldo pendiente: 'status' = manual, 'direct' = botón de saldo, 'auto' = auto-completado
+    const [layawayModal, setLayawayModal] = useState<'status' | 'direct' | 'auto' | null>(null);
     
     // Inicializar estados solo una vez cuando el componente se monta
     useEffect(() => {
@@ -162,25 +165,64 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
         });
     };
 
+    const performStatusUpdate = async (statuses: string[]) => {
+        try {
+            const result = await updateOrderMultipleStatuses(orderDetails.order_id, statuses, 'admin_user');
+            if (result.success) {
+                setMessage({ type: 'success', text: 'Estados actualizados exitosamente' });
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                setMessage({ type: 'error', text: result.message });
+            }
+        } catch {
+            setMessage({ type: 'error', text: 'Error al actualizar los estados' });
+        }
+    };
+
+    const doUpdateStatuses = () => performStatusUpdate(selectedStatuses);
+
     const handleUpdateStatuses = () => {
+        const completingWithPendingBalance =
+            selectedStatuses.includes('COMPLETED') &&
+            orderDetails.is_layaway &&
+            orderDetails.remaining_balance > 0;
+
+        if (completingWithPendingBalance) {
+            setLayawayModal('status');
+            return;
+        }
+        startTransition(doUpdateStatuses);
+    };
+
+    const isAlreadyCompleted = selectedStatuses.includes('COMPLETED');
+
+    const autoCompleteAfterDelivery = () => {
+        if (isAlreadyCompleted) return;
+        if (orderDetails.is_layaway && orderDetails.remaining_balance > 0) {
+            setLayawayModal('auto');
+        } else {
+            startTransition(() => performStatusUpdate(['COMPLETED']));
+        }
+    };
+
+    const handleLayawayConfirm = (collected: boolean) => {
+        const trigger = layawayModal;
+        setLayawayModal(null);
         startTransition(async () => {
-            try {
-                const result = await updateOrderMultipleStatuses(
-                    orderDetails.order_id, 
-                    selectedStatuses,
-                    'admin_user' // Usuario actual
-                );
-                
-                if (result.success) {
-                    setMessage({ type: 'success', text: 'Estados actualizados exitosamente' });
-                    // Forzar recarga de la página para mostrar los cambios actualizados
-                    setTimeout(() => window.location.reload(), 1500);
-                } else {
-                    setMessage({ type: 'error', text: result.message });
+            if (collected) {
+                const payResult = await completeLayawayPayment(orderDetails.order_id);
+                if (!payResult.success) {
+                    setMessage({ type: 'error', text: payResult.message });
+                    return;
                 }
-            } catch (error) {
-                console.error('Error updating statuses:', error);
-                setMessage({ type: 'error', text: 'Error al actualizar los estados' });
+            }
+            if (trigger === 'status') {
+                await performStatusUpdate(selectedStatuses);
+            } else if (trigger === 'auto') {
+                await performStatusUpdate(['COMPLETED']);
+            } else {
+                setMessage({ type: 'success', text: 'Saldo marcado como cobrado' });
+                setTimeout(() => window.location.reload(), 1500);
             }
         });
     };
@@ -190,8 +232,17 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
             try {
                 const result = await updateItemDeliveryStatus(itemId, !currentStatus);
                 if (result.success) {
+                    const markingAsDelivered = !currentStatus;
+                    if (markingAsDelivered) {
+                        const allDelivered = orderDetails.items.every(
+                            item => item.item_id === itemId ? true : item.delivered
+                        );
+                        if (allDelivered) {
+                            autoCompleteAfterDelivery();
+                            return;
+                        }
+                    }
                     setMessage({ type: 'success', text: 'Estado de entrega actualizado' });
-                    // Forzar recarga de la página para mostrar los cambios actualizados
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     setMessage({ type: 'error', text: result.message });
@@ -208,8 +259,11 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
             try {
                 const result = await updateAllItemsDeliveryStatus(orderDetails.order_id, delivered);
                 if (result.success) {
+                    if (delivered) {
+                        autoCompleteAfterDelivery();
+                        return;
+                    }
                     setMessage({ type: 'success', text: 'Estados de entrega actualizados' });
-                    // Forzar recarga de la página para mostrar los cambios actualizados
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     setMessage({ type: 'error', text: result.message });
@@ -503,11 +557,13 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
                                             </span>
                                         </div>
                                         {orderDetails.remaining_balance > 0 && (
-                                            <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
-                                                <p className="text-xs text-yellow-800 font-medium text-center">
-                                                    ⚠️ PENDIENTE COMPLETAR PAGO
-                                                </p>
-                                            </div>
+                                            <button
+                                                onClick={() => setLayawayModal('direct')}
+                                                disabled={isPending}
+                                                className="w-full mt-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold py-2 px-3 rounded transition-colors disabled:opacity-50"
+                                            >
+                                                ⚠️ Registrar pago de saldo
+                                            </button>
                                         )}
                                     </div>
                                 )}
@@ -565,6 +621,44 @@ export function OrderManagementView({ orderDetails }: OrderManagementViewProps) 
                     </div>
                 </div>
             </div>
+
+            {/* Modal: saldo pendiente de separado */}
+            {layawayModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">¿El saldo fue cobrado?</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Esta orden tiene un saldo pendiente de{' '}
+                            <span className="font-bold text-red-600">${orderDetails.remaining_balance.toFixed(2)}</span>.
+                        </p>
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => handleLayawayConfirm(true)}
+                                disabled={isPending}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                ✓ Sí, ya se cobró
+                            </button>
+                            {layawayModal === 'status' && (
+                                <button
+                                    onClick={() => handleLayawayConfirm(false)}
+                                    disabled={isPending}
+                                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    No, solo actualizar estado
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setLayawayModal(null)}
+                                disabled={isPending}
+                                className="w-full text-gray-400 hover:text-gray-600 text-sm py-1 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

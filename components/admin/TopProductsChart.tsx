@@ -2,15 +2,8 @@
 
 import React from 'react';
 import { Doughnut } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  TooltipItem,
-} from 'chart.js';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, TooltipItem } from 'chart.js';
 
-// Register the required Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface TopProduct {
@@ -24,305 +17,194 @@ interface TopProductsChartProps {
   totalItemsSold: number;
 }
 
-// Helper function to format currency
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 
-// Generate distinct colors for the chart
-const generateColors = (count: number) => {
-  const colors = [
-    '#3B82F6', // Blue
-    '#10B981', // Green
-    '#F59E0B', // Yellow
-    '#EF4444', // Red
-    '#8B5CF6', // Purple
-    '#06B6D4', // Cyan
-    '#F97316', // Orange
-    '#84CC16', // Lime
-    '#EC4899', // Pink
-    '#6B7280', // Gray
-  ];
-  
-  // If we need more colors than predefined, generate them
-  while (colors.length < count) {
-    const hue = (colors.length * 137.508) % 360; // Golden angle approximation
-    colors.push(`hsl(${hue}, 70%, 50%)`);
-  }
-  
-  return colors.slice(0, count);
-};
+const CHART_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6B7280',
+];
 
 export default function TopProductsChart({ products, totalItemsSold }: TopProductsChartProps) {
-  // Limit to top 10 products for better visualization
   const topProducts = products.slice(0, 10);
-  
+
   if (!topProducts || topProducts.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-gray-400 dark:text-gray-500 text-4xl mb-4">📊</div>
-        <p className="text-gray-500 dark:text-gray-400">No product data available</p>
+        <p className="text-4xl mb-3">📦</p>
+        <p className="text-gray-500">Sin datos de productos en este período</p>
       </div>
     );
   }
 
-  const colors = generateColors(topProducts.length);
-  const backgroundColors = colors.map(color => color + '80'); // Add transparency
-  const borderColors = colors;
+  const borderColors = CHART_COLORS.slice(0, topProducts.length);
+  const backgroundColors = borderColors.map(c => c + '99');
 
-  const data = {
-    labels: topProducts.map(product => product.product),
-    datasets: [
-      {
-        data: topProducts.map(product => product.quantity),
-        backgroundColor: backgroundColors,
-        borderColor: borderColors,
-        borderWidth: 2,
-        hoverOffset: 20, // This creates the "pop out" effect on hover
-        hoverBorderWidth: 3,
-      },
-    ],
+  const chartData = {
+    labels: topProducts.map(p => p.product),
+    datasets: [{
+      data: topProducts.map(p => p.quantity),
+      backgroundColor: backgroundColors,
+      borderColor: borderColors,
+      borderWidth: 2,
+      hoverOffset: 16,
+      hoverBorderWidth: 3,
+    }],
   };
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false, // Hide the legend completely
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        titleColor: '#fff',
-        bodyColor: '#fff',
+        backgroundColor: 'rgba(17,24,39,0.95)',
+        titleColor: '#f9fafb',
+        bodyColor: '#d1d5db',
         borderColor: '#374151',
         borderWidth: 1,
         cornerRadius: 8,
-        displayColors: true,
         padding: 12,
         callbacks: {
-          title: (tooltipItems: TooltipItem<'doughnut'>[]) => {
-            return tooltipItems[0].label;
-          },
-          label: (tooltipItem: TooltipItem<'doughnut'>) => {
-            const index = tooltipItem.dataIndex;
-            const product = topProducts[index];
-            const percentage = ((product.quantity / totalItemsSold) * 100).toFixed(1);
-            const avgPrice = product.total / product.quantity;
-            
+          label: (item: TooltipItem<'doughnut'>) => {
+            const p = topProducts[item.dataIndex];
+            const pct = ((p.quantity / totalItemsSold) * 100).toFixed(1);
+            const avg = p.total / p.quantity;
             return [
-              `Market Share: ${percentage}%`,
-              `Units Sold: ${product.quantity.toLocaleString()}`,
-              `Total Revenue: ${formatCurrency(product.total)}`,
-              `Avg. Price: ${formatCurrency(avgPrice)}`,
+              `Participación: ${pct}%`,
+              `Unidades vendidas: ${p.quantity.toLocaleString('es-MX')}`,
+              `Ingreso total: ${formatCurrency(p.total)}`,
+              `Precio promedio: ${formatCurrency(avg)}`,
             ];
           },
-          labelColor: (tooltipItem: TooltipItem<'doughnut'>) => {
-            const index = tooltipItem.dataIndex;
-            return {
-              borderColor: borderColors[index],
-              backgroundColor: backgroundColors[index],
-            };
-          },
+          labelColor: (item: TooltipItem<'doughnut'>) => ({
+            borderColor: borderColors[item.dataIndex],
+            backgroundColor: backgroundColors[item.dataIndex],
+          }),
         },
       },
     },
-    animation: {
-      animateRotate: true,
-      animateScale: true,
-      duration: 1000,
-    },
-    interaction: {
-      intersect: false,
-    },
-    cutout: '60%', // Creates the doughnut effect
+    animation: { animateRotate: true, animateScale: true, duration: 800 },
+    cutout: '62%',
   };
+
+  const topTotal = topProducts.reduce((s, p) => s + p.quantity, 0);
+  const topRevenue = topProducts.reduce((s, p) => s + p.total, 0);
+  const topCoverage = ((topTotal / totalItemsSold) * 100).toFixed(1);
 
   return (
     <div className="space-y-6">
-      <style jsx>{`
-        .text-shadow-sm {
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-      `}</style>
-      {/* Chart Container */}
-      <div className="relative h-96 w-full">
-        <Doughnut data={data} options={options} />
+
+      {/* Gráfica dona */}
+      <div className="relative h-80 w-full">
+        <Doughnut data={chartData} options={options} />
       </div>
 
-      {/* Percentage Bar Visualization */}
-      <div className="mt-6">
-        <h4 className="text-sm font-medium text-white dark:text-white mb-3">Market Share Distribution</h4>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-8 overflow-hidden shadow-inner">
-          <div className="flex h-full">
-            {topProducts.map((product, index) => {
-              // Calculate percentage based on top products total, not overall total
-              const topProductsTotal = topProducts.reduce((sum, p) => sum + p.quantity, 0);
-              const percentage = (product.quantity / topProductsTotal) * 100;
-              const overallPercentage = (product.quantity / totalItemsSold) * 100;
-              
-              return (
-                <div
-                  key={index}
-                  className="flex items-center justify-center text-xs font-medium text-white relative group transition-all duration-300 hover:brightness-110"
-                  style={{
-                    width: `${percentage}%`,
-                    backgroundColor: borderColors[index],
-                    minWidth: percentage > 5 ? 'auto' : '0px' // Only show text if segment is large enough
-                  }}
-                  title={`${product.product}: ${overallPercentage.toFixed(1)}% of total sales`}
-                >
-                  {percentage > 8 && (
-                    <span className="text-shadow-sm">
-                      {overallPercentage.toFixed(1)}%
-                    </span>
-                  )}
-                  
-                  {/* Tooltip on hover */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 whitespace-nowrap">
-                    <div className="font-medium">{product.product}</div>
-                    <div>Market Share: {overallPercentage.toFixed(1)}%</div>
-                    <div>Share of Top Products: {percentage.toFixed(1)}%</div>
-                    <div>Units: {product.quantity.toLocaleString()}</div>
-                    <div>Revenue: {formatCurrency(product.total)}</div>
-                    {/* Arrow pointing down */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        
-        {/* Legend for the bar */}
-        <div className="mt-4 flex flex-wrap gap-3 justify-center">
-          {topProducts.map((product, index) => {
-            const percentage = ((product.quantity / totalItemsSold) * 100).toFixed(1);
+      {/* Barra de distribución */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Distribución por producto
+        </p>
+        <div className="w-full bg-gray-100 rounded-full h-7 overflow-hidden flex">
+          {topProducts.map((product, i) => {
+            const pct = (product.quantity / topTotal) * 100;
+            const overallPct = (product.quantity / totalItemsSold) * 100;
             return (
-              <div key={index} className="flex items-center space-x-2 text-sm">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: borderColors[index] }}
-                ></div>
-                <span className="text-white dark:text-white font-medium">
-                  {product.product}
-                </span>
-                <span className="text-gray-200 dark:text-gray-200">
-                  ({percentage}%)
-                </span>
+              <div
+                key={i}
+                className="flex items-center justify-center text-xs font-semibold text-white relative group transition-all hover:brightness-110"
+                style={{ width: `${pct}%`, backgroundColor: borderColors[i], minWidth: pct > 5 ? 'auto' : 0 }}
+                title={`${product.product}: ${overallPct.toFixed(1)}%`}
+              >
+                {pct > 9 && `${overallPct.toFixed(0)}%`}
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-lg">
+                  <p className="font-semibold">{product.product}</p>
+                  <p>{overallPct.toFixed(1)}% del total</p>
+                  <p>{product.quantity.toLocaleString('es-MX')} unidades</p>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                </div>
               </div>
             );
           })}
         </div>
-        
-        {/* Show coverage info */}
-        <div className="mt-2 text-center">
-          <span className="text-xs text-gray-200 dark:text-gray-200">
-            Top {topProducts.length} products represent {((topProducts.reduce((sum, p) => sum + p.quantity, 0) / totalItemsSold) * 100).toFixed(1)}% of total sales
-          </span>
-        </div>
-      </div>
-      
-      {/* Statistics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-        <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {topProducts.length}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Top Products Shown</div>
-        </div>
-        <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {topProducts.reduce((sum, product) => sum + product.quantity, 0).toLocaleString()}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Units (Top Products)</div>
-        </div>
-        <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-            {formatCurrency(topProducts.reduce((sum, product) => sum + product.total, 0))}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Revenue (Top Products)</div>
-        </div>
       </div>
 
-      {/* Top Products Table */}
-      <div className="mt-8">
-        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Detailed Breakdown
-        </h4>
+      {/* Leyenda */}
+      <div className="flex flex-wrap gap-2">
+        {topProducts.map((product, i) => {
+          const pct = ((product.quantity / totalItemsSold) * 100).toFixed(1);
+          return (
+            <div key={i} className="flex items-center gap-1.5 text-sm text-gray-700">
+              <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: borderColors[i] }} />
+              <span className="font-medium">{product.product}</span>
+              <span className="text-gray-400">({pct}%)</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Resumen numérico */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-blue-50 rounded-lg p-4 text-center">
+          <p className="text-2xl font-bold text-blue-700">{topProducts.length}</p>
+          <p className="text-xs text-blue-600 font-medium mt-0.5">Productos mostrados</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-4 text-center">
+          <p className="text-2xl font-bold text-green-700">{topTotal.toLocaleString('es-MX')}</p>
+          <p className="text-xs text-green-600 font-medium mt-0.5">Unidades (top {topProducts.length})</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4 text-center">
+          <p className="text-xl font-bold text-purple-700">{formatCurrency(topRevenue)}</p>
+          <p className="text-xs text-purple-600 font-medium mt-0.5">Ingreso (top {topProducts.length})</p>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 text-center -mt-2">
+        Los top {topProducts.length} productos representan el {topCoverage}% de las unidades vendidas
+      </p>
+
+      {/* Tabla detallada */}
+      <div>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Desglose detallado</p>
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">
-                  Rank
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">
-                  Product
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">
-                  Units Sold
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">
-                  Market Share
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">
-                  Total Revenue
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-sm">
-                  Avg. Price
-                </th>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">#</th>
+                <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Producto</th>
+                <th className="text-center py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Unidades</th>
+                <th className="text-center py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Participación</th>
+                <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Ingreso</th>
+                <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Precio prom.</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {topProducts.map((product, index) => {
-                const percentage = ((product.quantity / totalItemsSold) * 100).toFixed(1);
-                const avgPrice = product.total / product.quantity;
-                
+            <tbody className="divide-y divide-gray-100">
+              {topProducts.map((product, i) => {
+                const pct = ((product.quantity / totalItemsSold) * 100).toFixed(1);
+                const avg = product.total / product.quantity;
                 return (
-                  <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
-                    <td className="py-4 px-4 text-sm">
-                      <div className="flex items-center">
-                        <div 
-                          className="w-4 h-4 rounded-full mr-3"
-                          style={{ backgroundColor: borderColors[index] }}
-                        ></div>
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">
-                          #{index + 1}
-                        </span>
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: borderColors[i] }} />
+                        <span className="font-semibold text-gray-500">#{i + 1}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
-                      {product.product}
-                    </td>
-                    <td className="py-4 px-4 text-sm text-gray-900 dark:text-gray-100">
-                      {product.quantity.toLocaleString()}
-                    </td>
-                    <td className="py-4 px-4 text-sm">
-                      <div className="flex items-center">
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                          <div 
-                            className="h-2 rounded-full transition-all duration-300"
-                            style={{ 
-                              width: `${percentage}%`,
-                              backgroundColor: borderColors[index]
-                            }}
-                          ></div>
+                    <td className="py-3 px-3 font-medium text-gray-900">{product.product}</td>
+                    <td className="py-3 px-3 text-center text-gray-700">{product.quantity.toLocaleString('es-MX')}</td>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                          <div
+                            className="h-1.5 rounded-full"
+                            style={{ width: `${pct}%`, backgroundColor: borderColors[i] }}
+                          />
                         </div>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium">
-                          {percentage}%
-                        </span>
+                        <span className="text-gray-600 font-medium w-10 text-right text-xs">{pct}%</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-900 dark:text-gray-100 font-medium">
-                      {formatCurrency(product.total)}
-                    </td>
-                    <td className="py-4 px-4 text-sm text-gray-900 dark:text-gray-100">
-                      {formatCurrency(avgPrice)}
-                    </td>
+                    <td className="py-3 px-3 text-right font-semibold text-gray-900">{formatCurrency(product.total)}</td>
+                    <td className="py-3 px-3 text-right text-gray-500">{formatCurrency(avg)}</td>
                   </tr>
                 );
               })}
@@ -330,6 +212,7 @@ export default function TopProductsChart({ products, totalItemsSold }: TopProduc
           </table>
         </div>
       </div>
+
     </div>
   );
 }
