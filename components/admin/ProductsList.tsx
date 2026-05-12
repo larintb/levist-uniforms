@@ -173,20 +173,39 @@ export function ProductsList() {
         setLoading(true);
         setError(null);
         try {
+            // Buscar collection_ids que corresponden a la marca buscada
+            let brandCollectionIds: string[] = [];
+            if (searchTerm) {
+                const { data: matchingBrands } = await supabase
+                    .from('brands')
+                    .select('id')
+                    .ilike('name', `%${searchTerm}%`);
+
+                if (matchingBrands && matchingBrands.length > 0) {
+                    const brandIds = matchingBrands.map(b => b.id);
+                    const { data: matchingCollections } = await supabase
+                        .from('collections')
+                        .select('id')
+                        .in('brand_id', brandIds);
+                    brandCollectionIds = matchingCollections?.map(c => c.id) ?? [];
+                }
+            }
+
             let query = supabase
                 .from('products')
                 .select(`
-                    id, 
-                    name, 
-                    sku_base, 
+                    id,
+                    name,
+                    sku_base,
                     collections ( name, brands ( name ) )
                 `, { count: 'exact' });
 
             if (searchTerm) {
-                // La búsqueda en tablas anidadas (brands) es más compleja.
-                // Esta implementación busca en `products` y `collections`.
-                // Para una búsqueda profunda en `brands` se podría requerir una función de base de datos (RPC).
-                 query = query.or(`name.ilike.%${searchTerm}%,sku_base.ilike.%${searchTerm}%`);
+                const orParts = [`name.ilike.%${searchTerm}%`, `sku_base.ilike.%${searchTerm}%`];
+                if (brandCollectionIds.length > 0) {
+                    orParts.push(`collection_id.in.(${brandCollectionIds.join(',')})`);
+                }
+                query = query.or(orParts.join(','));
             }
 
             if (sortConfig) {

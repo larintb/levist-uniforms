@@ -389,7 +389,14 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
                       <div className="col-span-1"></div>
                     </div>
                     <div className="space-y-4">
-                      {variant.inventory.map(inv => (
+                      {[...variant.inventory].sort((a, b) => {
+                        const ai = SIZES.indexOf(a.size);
+                        const bi = SIZES.indexOf(b.size);
+                        if (ai === -1 && bi === -1) return 0;
+                        if (ai === -1) return 1;
+                        if (bi === -1) return -1;
+                        return ai - bi;
+                      }).map(inv => (
                         <div key={inv.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-center">
                           <div className="col-span-12 sm:col-span-3">
                             <label className="sm:hidden text-xs font-medium text-gray-500">Talla</label>

@@ -65,32 +65,32 @@ export default async function EditProductPage({
     categoriesPromise,
   ]);
 
-  // Manejo de errores centralizado.
-  if (productError || brandsError || collectionsError || categoriesError) {
-    console.error("Error al cargar datos desde Supabase:", {
-      productError,
-      brandsError,
-      collectionsError,
-      categoriesError,
-    });
-    // Mostramos un error genérico si falla alguna consulta.
+  // Solo el producto es crítico — si falla, no podemos editar nada.
+  if (productError) {
+    console.error("Error al cargar el producto:", productError);
     return (
       <div className="p-8">
         <p className="rounded-lg bg-red-100 p-4 text-red-600">
-          Error al cargar los datos necesarios. Por favor, revisa la conexión y
-          vuelve a intentarlo.
+          Error al cargar el producto. Por favor, revisa la conexión y vuelve a intentarlo.
         </p>
       </div>
     );
   }
 
-  // Si las consultas fueron exitosas pero el producto específico no se encontró,
-  // mostramos la página 404.
   if (!product) {
     notFound();
   }
 
-  // Si todo es exitoso, renderizamos la página con el formulario.
+  // Si algún dato auxiliar falló por timeout, lo registramos pero no bloqueamos la página.
+  const auxiliaryErrors = [brandsError, collectionsError, categoriesError].filter(Boolean);
+  if (auxiliaryErrors.length > 0) {
+    console.warn("Algunos datos auxiliares fallaron (timeout de red):", {
+      brandsError,
+      collectionsError,
+      categoriesError,
+    });
+  }
+
   return (
     <div className="p-4 md:p-8">
       <header className="mb-8">
@@ -100,6 +100,13 @@ export default async function EditProductPage({
           <span className="font-semibold">{product.name}</span>.
         </p>
       </header>
+
+      {auxiliaryErrors.length > 0 && (
+        <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-4 text-yellow-800 text-sm">
+          Algunos datos (marcas, colecciones o categorías) no pudieron cargarse por un problema de conexión.
+          Los selectores pueden aparecer vacíos. <a href="" className="font-semibold underline">Recargar la página</a> para intentar de nuevo.
+        </div>
+      )}
 
       <main>
         <ProductForm
