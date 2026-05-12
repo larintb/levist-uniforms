@@ -47,6 +47,7 @@ interface ItemRow {
   quantity: number;
   price_at_sale: number;
   product_name: string | null;
+  sku: string | null;
   seller_name: string | null;
 }
 
@@ -63,8 +64,10 @@ export interface FinancialReport {
   // Desgloses (usan cobrado real)
   collectedByPaymentMethod: { method: string; collected: number; count: number }[];
   salesBySeller: { seller: string; total: number; count: number }[];
-  topSellingProducts: { product: string; quantity: number; total: number }[];
+  topSellingProducts: { product: string; sku: string; quantity: number; total: number }[];
   layawayOrders: LayawayOrderSummary[];
+  // Nuevos: tendencia diaria
+  salesByDay: { date: string; total: number; collected: number; orders: number }[];
 }
 
 export async function getFinancialReport(
@@ -87,6 +90,7 @@ export async function getFinancialReport(
     salesBySeller: [],
     topSellingProducts: [],
     layawayOrders: [],
+    salesByDay: [],
   };
 
   try {
@@ -110,7 +114,7 @@ export async function getFinancialReport(
     // --- Query 2: item-level for products and sellers ---
     let itemsQuery = supabase
       .from('full_order_details')
-      .select('order_id, quantity, price_at_sale, product_name, seller_name');
+      .select('order_id, quantity, price_at_sale, product_name, sku, seller_name');
 
     if (startDate) itemsQuery = itemsQuery.gte('order_date', toUTC(startDate, false));
     if (endDate)   itemsQuery = itemsQuery.lte('order_date', toUTC(endDate, true));
@@ -153,13 +157,31 @@ export async function getFinancialReport(
 
     layawayOrders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
+    // --- Daily sales trend ---
+    const byDay = new Map<string, { total: number; collected: number; orders: number }>();
+    (ordersData as OrderRow[]).forEach((order) => {
+      const orderTotal = Number(order.total) || 0;
+      const remaining = Number(order.remaining_balance) || 0;
+      const collected = orderTotal - remaining;
+      // Convert UTC to Matamoros local time (UTC-6 / UTC-5 DST)
+      const d = new Date(order.created_at);
+      const offset = isDaylightSavingTime(d) ? 5 : 6;
+      const local = new Date(d.getTime() - offset * 3600000);
+      const dateKey = local.toISOString().slice(0, 10);
+      const cur = byDay.get(dateKey) ?? { total: 0, collected: 0, orders: 0 };
+      byDay.set(dateKey, { total: cur.total + orderTotal, collected: cur.collected + collected, orders: cur.orders + 1 });
+    });
+    const salesByDay = Array.from(byDay.entries())
+      .map(([date, d]) => ({ date, ...d }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
     const totalOrders = ordersData.length;
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
 
     // --- Aggregate item-level metrics ---
     let totalItemsSold = 0;
     const bySeller = new Map<string, { total: number; count: number }>();
-    const byProduct = new Map<string, { quantity: number; total: number }>();
+    const byProduct = new Map<string, { sku: string; quantity: number; total: number }>();
     const seenOrdersBySeller = new Map<string, Set<string>>();
 
     (itemsData ?? [] as ItemRow[]).forEach((item) => {
@@ -181,8 +203,9 @@ export async function getFinancialReport(
 
       // Products
       const product = item.product_name || 'N/A';
-      const curP = byProduct.get(product) ?? { quantity: 0, total: 0 };
-      byProduct.set(product, { quantity: curP.quantity + qty, total: curP.total + price * qty });
+      const sku = item.sku || 'N/A';
+      const curP = byProduct.get(product) ?? { sku, quantity: 0, total: 0 };
+      byProduct.set(product, { sku: curP.sku || sku, quantity: curP.quantity + qty, total: curP.total + price * qty });
     });
 
     return {
@@ -204,6 +227,7 @@ export async function getFinancialReport(
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 10),
       layawayOrders,
+      salesByDay,
     };
 
   } catch (error) {

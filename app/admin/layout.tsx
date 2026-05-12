@@ -1,38 +1,42 @@
-// app/admin/layout.tsx
-"use client"; // Convertimos el layout en un Componente de Cliente para manejar el estado
+"use client";
 
-import { Sidebar } from '@/components/admin/Sidebar';
-import React, { useState } from 'react';
+import { Sidebar } from "@/components/admin/Sidebar";
+import { Topbar } from "@/components/admin/Topbar";
+import React, { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Estado para controlar si la barra lateral está colapsada
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Función para alternar el estado
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
   return (
-    <div className="flex min-h-screen w-full bg-gray-50">
-      {/* Sidebar - La anchura ahora es dinámica y tiene una transición suave */}
+    <div className="flex min-h-screen w-full bg-background">
       <div
-        className={`shadow-lg z-10 transition-all duration-300 ease-in-out sticky top-0 h-screen ${
-          isCollapsed ? 'w-20' : 'w-64'
-        }`}
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out print:hidden",
+          isCollapsed ? "w-14" : "w-56"
+        )}
       >
-        {/* Pasamos el estado y la función para alternarlo a la Sidebar */}
-        <Sidebar isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <Sidebar
+          isCollapsed={isCollapsed}
+          toggleSidebar={() => setIsCollapsed((p) => !p)}
+        />
       </div>
 
-      {/* Main Content - Contenido principal de la página */}
-      <main className="flex-1">
-        {children}
-      </main>
+      <div
+        className={cn(
+          "flex flex-1 flex-col transition-all duration-300 ease-in-out print:pl-0",
+          isCollapsed ? "pl-14" : "pl-56"
+        )}
+      >
+        <Topbar />
+        <main className="flex-1 min-h-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

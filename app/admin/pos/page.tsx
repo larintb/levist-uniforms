@@ -122,7 +122,7 @@ const TabletPosView: React.FC<TabletPosViewProps> = ({ cart, schools, products, 
     }, [searchTerm, products]);
 
     return (
-        <div className="h-screen w-screen flex font-sans antialiased text-gray-900 overflow-hidden">
+        <div className="flex antialiased overflow-hidden" style={{ height: 'calc(100vh - 3.5rem)' }}>
             {/* Carrito de Compras - Responsive sin anchos fijos */}
             <div className="flex-shrink-0 w-full sm:w-2/5 min-w-0 max-w-2xl h-full border-r border-gray-200">
                 <PosCart 

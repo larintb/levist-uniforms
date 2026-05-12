@@ -1,389 +1,246 @@
 // app/admin/reports/page.tsx
 import { getFinancialReport, type LayawayOrderSummary } from './actions';
 import { Suspense } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
+import ReportCharts from './ReportCharts';
 import TopProductsChart from '@/components/admin/TopProductsChart';
 
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+const fmt = (n: number) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
 
-// --- Componentes UI ---
-
-const StatCard = ({
-  title,
-  value,
-  subtitle,
-  accent = 'blue',
-  icon,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  accent?: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
-  icon: React.ReactNode;
-}) => {
-  const colors = {
-    blue:   'from-blue-500 to-blue-600',
-    green:  'from-green-500 to-green-600',
-    yellow: 'from-yellow-500 to-yellow-600',
-    red:    'from-red-500 to-red-600',
-    purple: 'from-purple-500 to-purple-600',
-  };
+// ─── KPI card ────────────────────────────────────────────────
+function KpiCard({ title, value, sub, trend }: {
+  title: string; value: string; sub?: string;
+  trend?: { label: string; positive: boolean };
+}) {
   return (
-    <div className="bg-white rounded-xl shadow border border-gray-200 p-6 flex items-center gap-4">
-      <div className={`bg-gradient-to-br ${colors[accent]} p-3 rounded-lg shadow shrink-0`}>
-        <div className="text-white w-6 h-6">{icon}</div>
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 truncate">{value}</p>
-        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
-      </div>
-    </div>
+    <Card>
+      <CardHeader className="px-4 pt-4 pb-1">
+        <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <p className="text-2xl font-semibold font-mono tabular-nums text-foreground leading-tight">{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+        {trend && (
+          <p className={`text-xs font-medium mt-1 ${trend.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            {trend.positive ? '↑' : '↓'} {trend.label}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
-};
+}
 
-const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-      <h3 className="text-base font-semibold text-gray-800">{title}</h3>
-    </div>
-    <div className="p-6">{children}</div>
-  </div>
-);
-
-// --- Íconos ---
-const IconMoney = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-  </svg>
-);
-const IconCash = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75" />
-  </svg>
-);
-const IconCart = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-  </svg>
-);
-const IconLayaway = () => (
-  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-  </svg>
-);
-const LayawayTable = ({ orders }: { orders: LayawayOrderSummary[] }) => {
-  if (orders.length === 0) return null;
+// ─── Section wrapper ──────────────────────────────────────────
+function Section({ title, description, children }: {
+  title: string; description?: string; children: React.ReactNode;
+}) {
   return (
-    <SectionCard title={`🏦 Separados con saldo pendiente (${orders.length})`}>
+    <Card>
+      <CardHeader className="px-6 py-4 border-b border-border">
+        <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+        {description && <CardDescription className="text-xs mt-0.5">{description}</CardDescription>}
+      </CardHeader>
+      <CardContent className="p-6">{children}</CardContent>
+    </Card>
+  );
+}
+
+// ─── Layaway table ────────────────────────────────────────────
+function LayawayTable({ orders }: { orders: LayawayOrderSummary[] }) {
+  if (!orders.length) return null;
+  const totalPending = orders.reduce((s, o) => s + o.remaining_balance, 0);
+  return (
+    <Section
+      title={`Separados con saldo pendiente (${orders.length})`}
+      description="Clientes que tienen un anticipo pagado pero aún deben un saldo"
+    >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Orden</th>
-              <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Cliente</th>
-              <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Fecha</th>
-              <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Total</th>
-              <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Anticipo</th>
-              <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Saldo</th>
-              <th className="py-2 px-3" />
+            <tr className="border-b border-border">
+              {['Orden', 'Cliente', 'Fecha', 'Total', 'Anticipo', 'Saldo pendiente', ''].map((h, i) => (
+                <th key={i} className={`py-2 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide ${i > 2 ? 'text-right' : 'text-left'}`}>{h}</th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-border">
             {orders.map((o) => (
-              <tr key={o.id} className="hover:bg-amber-50 transition-colors">
-                <td className="py-3 px-3 font-mono text-xs text-gray-500">
-                  #{o.id.slice(0, 8).toUpperCase()}
+              <tr key={o.id} className="hover:bg-accent/50 transition-colors">
+                <td className="py-2.5 px-3 font-mono text-xs text-muted-foreground">#{o.id.slice(0, 8).toUpperCase()}</td>
+                <td className="py-2.5 px-3 font-medium text-foreground">{o.customer_name}</td>
+                <td className="py-2.5 px-3 text-muted-foreground text-xs">{new Date(o.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                <td className="py-2.5 px-3 text-right font-mono tabular-nums text-muted-foreground">{fmt(o.order_total)}</td>
+                <td className="py-2.5 px-3 text-right font-mono tabular-nums text-emerald-600">{fmt(o.down_payment)}</td>
+                <td className="py-2.5 px-3 text-right">
+                  <span className="inline-block bg-destructive/10 text-destructive font-semibold px-2 py-0.5 rounded text-xs font-mono">{fmt(o.remaining_balance)}</span>
                 </td>
-                <td className="py-3 px-3 font-medium text-gray-900">{o.customer_name}</td>
-                <td className="py-3 px-3 text-gray-500">
-                  {new Date(o.created_at).toLocaleDateString('es-MX', {
-                    day: 'numeric', month: 'short', year: 'numeric',
-                  })}
-                </td>
-                <td className="py-3 px-3 text-right text-gray-700">{formatCurrency(o.order_total)}</td>
-                <td className="py-3 px-3 text-right text-green-700 font-medium">{formatCurrency(o.down_payment)}</td>
-                <td className="py-3 px-3 text-right">
-                  <span className="inline-block bg-red-50 text-red-700 font-bold px-2 py-0.5 rounded">
-                    {formatCurrency(o.remaining_balance)}
-                  </span>
-                </td>
-                <td className="py-3 px-3 text-right">
-                  <a
-                    href={`/admin/orders/${o.id}/manage`}
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
-                  >
-                    Ver →
-                  </a>
+                <td className="py-2.5 px-3 text-right">
+                  <a href={`/admin/orders/${o.id}/manage`} className="text-xs font-medium text-primary hover:underline">Ver →</a>
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-gray-200 bg-gray-50">
-              <td colSpan={5} className="py-3 px-3 font-bold text-gray-700 text-right">Total saldo pendiente</td>
-              <td className="py-3 px-3 text-right">
-                <span className="inline-block bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded text-base">
-                  {formatCurrency(orders.reduce((s, o) => s + o.remaining_balance, 0))}
-                </span>
+            <tr className="border-t-2 border-border bg-muted/30">
+              <td colSpan={5} className="py-2.5 px-3 font-semibold text-foreground text-right text-sm">Total pendiente</td>
+              <td className="py-2.5 px-3 text-right">
+                <span className="inline-block bg-destructive/10 text-destructive font-bold px-2 py-0.5 rounded font-mono">{fmt(totalPending)}</span>
               </td>
               <td />
             </tr>
           </tfoot>
         </table>
       </div>
-    </SectionCard>
+    </Section>
   );
-};
+}
 
-// --- Página principal ---
-export default async function ReportsPage({
-  searchParams,
-}: {
+// ─── Main page ────────────────────────────────────────────────
+export default async function ReportsPage({ searchParams }: {
   searchParams: Promise<{ startDate?: string; endDate?: string }>;
 }) {
   const params = await searchParams;
   const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    .toISOString()
-    .split('T')[0];
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
   const todayStr = today.toISOString().split('T')[0];
-
   const startDate = params.startDate || firstDayOfMonth;
   const endDate = params.endDate || todayStr;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+    <div className="p-6 space-y-6">
+      <PageHeader
+        title="Reportes"
+        description="Análisis financiero y de tendencias del período seleccionado"
+      />
 
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reportes de Ventas</h1>
-          <p className="text-gray-500 mt-1">Resumen financiero del período seleccionado</p>
-        </div>
-
-        {/* Filtro de fechas */}
-        <SectionCard title="Período del reporte">
-          <form method="GET" className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+      {/* Date filter */}
+      <Card>
+        <CardContent className="p-4">
+          <form method="GET" className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
-              <input
-                type="date"
-                name="startDate"
-                defaultValue={startDate}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Fecha inicio</label>
+              <input type="date" name="startDate" defaultValue={startDate}
+                className="rounded-md border border-input px-3 py-2 text-sm text-foreground bg-background focus:ring-2 focus:ring-ring focus:border-ring outline-none transition h-9" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
-              <input
-                type="date"
-                name="endDate"
-                defaultValue={endDate}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Fecha fin</label>
+              <input type="date" name="endDate" defaultValue={endDate}
+                className="rounded-md border border-input px-3 py-2 text-sm text-foreground bg-background focus:ring-2 focus:ring-ring focus:border-ring outline-none transition h-9" />
             </div>
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
-            >
-              Generar reporte
-            </button>
+            <Button type="submit" size="sm">Generar reporte</Button>
           </form>
-        </SectionCard>
+        </CardContent>
+      </Card>
 
-        <Suspense key={startDate + endDate} fallback={<ReportSkeleton />}>
-          <ReportContent startDate={startDate} endDate={endDate} />
-        </Suspense>
-      </div>
+      <Suspense key={startDate + endDate} fallback={<ReportSkeleton />}>
+        <ReportContent startDate={startDate} endDate={endDate} />
+      </Suspense>
     </div>
   );
 }
 
-// --- Contenido del reporte ---
+// ─── Report content (server) ──────────────────────────────────
 async function ReportContent({ startDate, endDate }: { startDate: string; endDate: string }) {
   const report = await getFinancialReport(startDate, endDate);
 
   if (report.totalOrders === 0) {
     return (
-      <div className="text-center py-20 text-gray-400">
-        <p className="text-4xl mb-3">📊</p>
-        <p className="text-lg font-medium">Sin ventas en este período</p>
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+        <span className="text-5xl mb-4">📊</span>
+        <p className="text-base font-medium">Sin ventas en este período</p>
+        <p className="text-sm mt-1">Selecciona otro rango de fechas</p>
       </div>
     );
   }
 
-  const uncollected = report.totalSales - report.totalCollected;
+  const collectionRate = report.totalSales > 0
+    ? (report.totalCollected / report.totalSales) * 100
+    : 100;
 
   return (
-    <div className="space-y-8">
-
-      {/* Bloque principal: volumen vs cobrado */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Resumen financiero
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Volumen de ventas"
-            value={formatCurrency(report.totalSales)}
-            subtitle="Total comprometido (incl. separados)"
-            accent="blue"
-            icon={<IconMoney />}
-          />
-          <StatCard
-            title="Cobrado real"
-            value={formatCurrency(report.totalCollected)}
-            subtitle="Dinero que realmente entró"
-            accent="green"
-            icon={<IconCash />}
-          />
-          <StatCard
-            title="Órdenes"
-            value={report.totalOrders.toLocaleString('es-MX')}
-            subtitle={`Promedio ${formatCurrency(report.averageOrderValue)}`}
-            accent="purple"
-            icon={<IconCart />}
-          />
-          <StatCard
-            title="Por cobrar (separados)"
-            value={formatCurrency(report.pendingLayawayBalance)}
-            subtitle={`${report.activeLayawayOrders} separado${report.activeLayawayOrders !== 1 ? 's' : ''} con saldo`}
-            accent={report.pendingLayawayBalance > 0 ? 'yellow' : 'green'}
-            icon={<IconLayaway />}
-          />
-        </div>
+    <div className="space-y-6">
+      {/* KPI row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Volumen de ventas"
+          value={fmt(report.totalSales)}
+          sub="Total comprometido (incl. separados)"
+        />
+        <KpiCard
+          title="Cobrado real"
+          value={fmt(report.totalCollected)}
+          sub={`${collectionRate.toFixed(1)}% del volumen`}
+          trend={collectionRate >= 90
+            ? { label: 'Tasa de cobro alta', positive: true }
+            : { label: `${(100 - collectionRate).toFixed(1)}% pendiente en separados`, positive: false }
+          }
+        />
+        <KpiCard
+          title="Órdenes"
+          value={report.totalOrders.toLocaleString('es-MX')}
+          sub={`Promedio ${fmt(report.averageOrderValue)}`}
+        />
+        <KpiCard
+          title="Artículos vendidos"
+          value={report.totalItemsSold.toLocaleString('es-MX')}
+          sub={`${(report.totalItemsSold / report.totalOrders).toFixed(1)} por orden`}
+        />
       </div>
 
-      {/* Barra de conciliación */}
-      {uncollected > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-          <p className="text-sm font-semibold text-amber-800 mb-3">
-            Conciliación del período
-          </p>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-amber-600 font-medium">Volumen vendido</p>
-              <p className="text-xl font-bold text-amber-900">{formatCurrency(report.totalSales)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-amber-600 font-medium">Cobrado</p>
-              <p className="text-xl font-bold text-green-700">{formatCurrency(report.totalCollected)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-amber-600 font-medium">Pendiente separados</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(uncollected)}</p>
-            </div>
-          </div>
-          <div className="mt-3 h-2 bg-amber-200 rounded-full overflow-hidden">
-            <div
-              className="h-2 bg-green-500 rounded-full transition-all"
-              style={{ width: `${Math.min((report.totalCollected / report.totalSales) * 100, 100)}%` }}
-            />
-          </div>
-          <p className="text-xs text-amber-600 mt-1 text-right">
-            {((report.totalCollected / report.totalSales) * 100).toFixed(1)}% cobrado
-          </p>
+      {/* Secondary KPIs */}
+      {report.pendingLayawayBalance > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          <KpiCard
+            title="Saldo pendiente (separados)"
+            value={fmt(report.pendingLayawayBalance)}
+            sub={`${report.activeLayawayOrders} separado${report.activeLayawayOrders !== 1 ? 's' : ''} activo${report.activeLayawayOrders !== 1 ? 's' : ''}`}
+            trend={{ label: 'Por cobrar', positive: false }}
+          />
+          <KpiCard
+            title="Cobrado de separados"
+            value={fmt(report.totalCollected - (report.totalSales - report.totalCollected - report.pendingLayawayBalance))}
+            sub="Anticipos recibidos"
+            trend={{ label: 'Entrada efectiva', positive: true }}
+          />
         </div>
       )}
 
-      {/* Separados con saldo pendiente */}
-      <LayawayTable orders={report.layawayOrders} />
+      {/* Client-side charts (area + pie + bar sellers) */}
+      <ReportCharts report={report} />
 
-      {/* Desglose por método de pago */}
-      <SectionCard title="Cobrado por método de pago">
-        {report.collectedByPaymentMethod.length === 0 ? (
-          <p className="text-gray-400 text-center py-6">Sin datos</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Método</th>
-                  <th className="text-center py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Órdenes</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Cobrado</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">% del total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {report.collectedByPaymentMethod.map((row) => (
-                  <tr key={row.method} className="hover:bg-gray-50">
-                    <td className="py-3 px-3 font-medium text-gray-900">{row.method}</td>
-                    <td className="py-3 px-3 text-center text-gray-600">{row.count}</td>
-                    <td className="py-3 px-3 text-right font-bold text-gray-900">{formatCurrency(row.collected)}</td>
-                    <td className="py-3 px-3 text-right text-gray-500">
-                      {report.totalCollected > 0
-                        ? `${((row.collected / report.totalCollected) * 100).toFixed(1)}%`
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-300 bg-gray-50">
-                  <td className="py-3 px-3 font-bold text-gray-900">Total</td>
-                  <td className="py-3 px-3 text-center font-bold text-gray-900">{report.totalOrders}</td>
-                  <td className="py-3 px-3 text-right font-bold text-green-700 text-base">{formatCurrency(report.totalCollected)}</td>
-                  <td className="py-3 px-3 text-right font-bold text-gray-900">100%</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* Desempeño por vendedor */}
-      <SectionCard title="Desempeño por vendedor">
-        {report.salesBySeller.length === 0 ? (
-          <p className="text-gray-400 text-center py-6">Sin datos</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Vendedor</th>
-                  <th className="text-center py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Órdenes</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Volumen</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-semibold uppercase text-xs">Promedio</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {report.salesBySeller.map((row) => (
-                  <tr key={row.seller} className="hover:bg-gray-50">
-                    <td className="py-3 px-3 font-medium text-gray-900">{row.seller}</td>
-                    <td className="py-3 px-3 text-center text-gray-600">{row.count}</td>
-                    <td className="py-3 px-3 text-right font-bold text-gray-900">{formatCurrency(row.total)}</td>
-                    <td className="py-3 px-3 text-right text-gray-500">
-                      {row.count > 0 ? formatCurrency(row.total / row.count) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* Top productos */}
-      <SectionCard title="Productos más vendidos">
+      {/* Top products */}
+      <Section title="Top 10 Productos" description="Productos más vendidos por unidades en el período">
         <TopProductsChart
           products={report.topSellingProducts}
           totalItemsSold={report.totalItemsSold}
         />
-      </SectionCard>
+      </Section>
 
+      {/* Layaway table */}
+      <LayawayTable orders={report.layawayOrders} />
     </div>
   );
 }
 
-const ReportSkeleton = () => (
-  <div className="space-y-6 animate-pulse">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-28 bg-gray-200 rounded-xl" />
-      ))}
+// ─── Skeleton ─────────────────────────────────────────────────
+function ReportSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+      </div>
+      <Skeleton className="h-80 rounded-xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Skeleton className="h-72 rounded-xl" />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+      <Skeleton className="h-80 rounded-xl" />
     </div>
-    <div className="h-48 bg-gray-200 rounded-xl" />
-    <div className="h-64 bg-gray-200 rounded-xl" />
-  </div>
-);
+  );
+}

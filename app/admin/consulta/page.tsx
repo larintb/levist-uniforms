@@ -492,10 +492,10 @@ export default function ConsultaPage() {
     };
     
     return (
-        <div className="p-4 md:p-8 w-full max-w-4xl mx-auto">
+        <div className="p-6 w-full max-w-4xl mx-auto">
             <Toaster position="bottom-center" />
             <header className="text-center mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Centro de Operaciones</h1>
+                <h1 className="text-2xl font-semibold text-foreground">Centro de Operaciones</h1>
                 <p className="text-gray-600 mt-2">
                     {mode === 'consulta'
                         ? "Escanea un código de barras de producto o un código QR de orden para ver detalles."

@@ -1,6 +1,7 @@
 // app/admin/catalog/page.tsx
 import { createClient } from '@/lib/supabase/server';
 import { CatalogManager } from '@/components/admin/CatalogManager';
+import { PageHeader } from '@/components/admin/PageHeader';
 
 export default async function CatalogPage() {
     const supabase = await createClient();
@@ -22,19 +23,13 @@ export default async function CatalogPage() {
     }
 
     return (
-        <div className="p-4 md:p-8">
-            <header className="mb-8">
-                <h1 className="text-4xl font-bold text-gray-900">Catálogo</h1>
-                <p className="text-lg text-gray-600">Gestiona las marcas, colecciones y categorías de tu tienda.</p>
-            </header>
-
-            <main>
-                <CatalogManager 
-                    initialBrands={brands || []} 
-                    initialCollections={collections || []}
-                    initialCategories={categories || []} // Añadido
-                />
-            </main>
+        <div className="p-6">
+            <PageHeader title="Catálogo" description="Gestiona las marcas, colecciones y categorías de tu tienda." />
+            <CatalogManager
+                initialBrands={brands || []}
+                initialCollections={collections || []}
+                initialCategories={categories || []}
+            />
         </div>
     );
 }

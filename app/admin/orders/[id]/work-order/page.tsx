@@ -5,270 +5,231 @@ import { createClient } from '@/lib/supabase/client';
 import React, { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 import Image from 'next/image';
+import { Printer } from 'lucide-react';
 
-// Componente actualizado que solo muestra la orden de trabajo
-type OrderDetailsForWorkOrder = {
-    order_id: string;
-    order_date: string;
-    customer_name: string | null;
-    customer_phone: string | null;
-    embroidery_notes: string | null;
-    school_name?: string;
-    seller_name: string | null;
-    items: {
-        item_id: string;
-        product_name: string;
-        sku: string;
-        color: string;
-        size: string;
-        quantity: number;
-        price_at_sale: number;
-    }[];
+type WorkOrderDetails = {
+  order_id: string;
+  order_date: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  embroidery_notes: string | null;
+  school_name?: string;
+  seller_name: string | null;
+  items: {
+    item_id: string;
+    product_name: string;
+    sku: string;
+    color: string;
+    size: string;
+    quantity: number;
+    price_at_sale: number;
+  }[];
 };
 
-// --- Componente de Logo ---
-const LogoComponent = ({ className }: { className?: string }) => {
-    const [imageError, setImageError] = React.useState(false);
+const PRINT_CSS = `
+@page {
+  size: 80mm auto;
+  margin: 2mm 3mm;
+}
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 80mm !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 9pt !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .no-print { display: none !important; }
+  .ticket-wrapper {
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+`;
 
-    if (imageError) {
-        return (
-            <div className={`${className} bg-indigo-600 text-white flex items-center justify-center rounded-full font-bold text-sm`}>
-                LU
-            </div>
-        );
-    }
-
-    return (
-        <Image
-            src="/logo.jpg"
-            alt="Levist Uniforms Logo"
-            width={40}
-            height={40}
-            className={className}
-            onError={() => setImageError(true)}
-        />
-    );
+const T = {
+  container: { fontFamily: "Arial, Helvetica, sans-serif", fontSize: "9pt", color: "#000", background: "#fff", width: "80mm", margin: "0 auto" } as React.CSSProperties,
+  center: { textAlign: "center" } as React.CSSProperties,
+  bold: { fontWeight: 700 } as React.CSSProperties,
+  small: { fontSize: "7.5pt" } as React.CSSProperties,
+  row: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 } as React.CSSProperties,
+  label: { fontSize: "7.5pt", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#555" },
 };
 
-// Función para obtener solo los datos necesarios para la orden de trabajo
-async function getWorkOrderDetails(orderId: string): Promise<OrderDetailsForWorkOrder | null> {
-    const supabase = createClient();
-    
-    // Obtener detalles de la orden desde la vista
-    const { data: viewData, error: viewError } = await supabase
-        .from('full_order_details_view')
-        .select('*')
-        .eq('order_id', orderId);
+const Line = ({ dashed = true }: { dashed?: boolean }) => (
+  <div style={{ borderTop: dashed ? "1px dashed #000" : "1px solid #000", margin: "3px 0" }} />
+);
 
-    if (viewError || !viewData || viewData.length === 0) {
-        console.error('Error al obtener detalles de la orden desde la vista:', viewError?.message);
-        return null;
-    }
+const LogoComponent = ({ size = 32 }: { size?: number }) => {
+  const [err, setErr] = React.useState(false);
+  if (err) return (
+    <div style={{ width: size, height: size, background: "#1e293b", color: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 10 }}>LU</div>
+  );
+  return <Image src="/logo.jpg" alt="Levist" width={size} height={size} style={{ borderRadius: "50%", objectFit: "cover" }} onError={() => setErr(true)} />;
+};
 
-    const orderInfo = viewData[0];
+async function getWorkOrderDetails(orderId: string): Promise<WorkOrderDetails | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('full_order_details_view')
+    .select('*')
+    .eq('order_id', orderId);
 
-    const items = viewData.map(row => ({
-        item_id: row.item_id,
-        product_name: row.product_name,
-        sku: row.sku,
-        color: row.color,
-        size: row.size,
-        quantity: row.quantity,
-        price_at_sale: row.price_at_sale,
-    }));
+  if (error || !data?.length) return null;
 
-    const workOrderDetails: OrderDetailsForWorkOrder = {
-        order_id: orderInfo.order_id,
-        order_date: orderInfo.order_date,
-        customer_name: orderInfo.customer_name,
-        customer_phone: orderInfo.customer_phone,
-        embroidery_notes: orderInfo.embroidery_notes,
-        school_name: orderInfo.school_name,
-        seller_name: orderInfo.seller_name,
-        items: items,
-    };
-
-    return workOrderDetails;
+  const o = data[0];
+  return {
+    order_id: o.order_id,
+    order_date: o.order_date,
+    customer_name: o.customer_name,
+    customer_phone: o.customer_phone,
+    embroidery_notes: o.embroidery_notes,
+    school_name: o.school_name,
+    seller_name: o.seller_name,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    items: data.map((r: any) => ({
+      item_id: String(r.item_id ?? ''),
+      product_name: String(r.product_name ?? ''),
+      sku: String(r.sku ?? ''),
+      color: String(r.color ?? ''),
+      size: String(r.size ?? ''),
+      quantity: Number(r.quantity ?? 0),
+      price_at_sale: Number(r.price_at_sale ?? 0),
+    })),
+  };
 }
 
-// Componente de Orden de Trabajo actualizado basado en Receipt.tsx
-function WorkOrderTicket({ details }: { details: OrderDetailsForWorkOrder }) {
-    return (
-        <>
-            <style jsx global>{`
-                @media print {
-                    body * { visibility: hidden; }
-                    .work-order-printable, .work-order-printable * { visibility: visible; }
-                    html, body { margin: 0 !important; padding: 0 !important; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .work-order-printable {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 80mm;
-                        height: auto;
-                        font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif;
-                        font-size: 8pt;
-                        color: #000 !important;
-                        background: #fff;
-                        font-weight: 700 !important;
-                    }
-                    .work-order-printable * { 
-                        font-weight: 700 !important; 
-                        color: #000 !important; 
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                        font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif !important;
-                    }
-                    .work-order-printable p, 
-                    .work-order-printable h1, 
-                    .work-order-printable h2,
-                    .work-order-printable span,
-                    .work-order-printable div { 
-                        font-weight: 700 !important; 
-                        color: #000 !important;
-                        font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif !important;
-                    }
-                    .work-order-printable b,
-                    .work-order-printable strong { 
-                        font-weight: 800 !important; 
-                        color: #000 !important;
-                        font-family: 'Verdana', 'Tahoma', 'Arial', sans-serif !important;
-                    }
-                    .no-print { display: none !important; }
-                }
-                @page {
-                    size: 80mm auto;
-                    margin: 0;
-                }
-            `}</style>
-
-            <div className="bg-white text-black p-1 max-w-[80mm] mx-auto work-order-printable font-black" style={{ fontWeight: '700', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>
-                <header className="text-center mb-1" style={{ fontWeight: '700' }}>
-                    <LogoComponent className="mx-auto w-8 h-8 rounded-full mb-1" />
-                    <h1 className="text-sm font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>Levist Uniforms</h1>
-                    <p className="text-[10px] leading-tight font-black" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>Matamoros, Tamaulipas</p>
-                    <p className="mt-1 font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>Orden de Trabajo</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>PRODUCCIÓN / TALLER</p>
-                </header>
-
-                <section className="my-1 space-y-0.5 leading-tight" style={{ fontWeight: '700' }}>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>No. Orden:</b> {details.order_id.slice(0, 8)}</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>Fecha:</b> {new Date(details.order_date).toLocaleString('es-MX', { timeZone: 'America/Matamoros' })}</p>
-                    <p className="font-black text-xs" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}><b style={{ fontWeight: '800' }}>Vendedor:</b> {details.seller_name || 'N/A'}</p>
-                    <section className="my-1 p-1 border-2 border-black rounded-sm bg-gray-100" style={{ fontWeight: '700' }}>
-                        <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>CLIENTE:</p>
-                        <p className="text-center font-black text-sm" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.customer_name || 'MOSTRADOR'}</p>
-                    </section>
-                </section>
-
-                {/* Sección destacada para la escuela */}
-                {details.school_name && (
-                    <section className="my-1 p-1 border-2 border-black rounded-sm bg-blue-50" style={{ fontWeight: '700' }}>
-                        <p className="text-center font-black text-xs uppercase" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>ESCUELA:</p>
-                        <p className="text-center font-black text-sm" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.school_name}</p>
-                    </section>
-                )}
-
-                {details.embroidery_notes && (
-                    <section className="my-1 p-1 border border-black rounded-sm bg-white" style={{ fontWeight: '700' }}>
-                        <h2 className="font-black text-xs mb-0.5" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>Instrucciones:</h2>
-                        <p className="font-black text-xs whitespace-pre-wrap" style={{ fontWeight: '700', color: '#000', fontFamily: '"Verdana", "Tahoma", "Arial", sans-serif' }}>{details.embroidery_notes}</p>
-                    </section>
-                )}
-
-                <footer className="mt-2 flex justify-center">
-                    <div className="w-20 h-20 bg-white p-0.5">
-                        <QRCode 
-                            value={details.order_id} 
-                            size={128} 
-                            style={{ height: "auto", maxWidth: "100%", width: "100%" }} 
-                            viewBox={`0 0 256 256`}
-                        />
-                    </div>
-                </footer>
-            </div>
-        </>
-    );
-}
-
-// Página principal
-export default function WorkOrderPage({ params }: { params: Promise<{ id: string }> }) {
-    const [workOrderDetails, setWorkOrderDetails] = useState<OrderDetailsForWorkOrder | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        async function loadData() {
-            try {
-                const { id } = await params;
-                const details = await getWorkOrderDetails(id);
-                if (details) {
-                    setWorkOrderDetails(details);
-                } else {
-                    setError(true);
-                }
-            } catch (err) {
-                console.error('Error loading work order details:', err);
-                setError(true);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        loadData();
-    }, [params]);
-
-    useEffect(() => {
-        // Auto-imprimir cuando se abre desde el botón de múltiples copias
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('autoprint') === 'true' && workOrderDetails) {
-            const timer = setTimeout(() => {
-                window.print();
-            }, 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [workOrderDetails]);
-
-    if (loading) {
-        return (
-            <div className="bg-gray-100 min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando orden de trabajo...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error || !workOrderDetails) {
-        return (
-            <div className="bg-gray-100 min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-red-600 mb-4">Error: No se pudo cargar la orden de trabajo</p>
-                    <button 
-                        onClick={() => window.close()} 
-                        className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                    >
-                        Cerrar ventana
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="bg-gray-100 min-h-screen">
-            <div className="no-print text-center p-4">
-                <button 
-                    onClick={() => window.print()}
-                    className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                    🖨️ Imprimir Orden de Trabajo
-                </button>
-                <p className="text-sm text-gray-600 mt-2">Esta página se imprimirá automáticamente cuando se abra desde múltiples copias</p>
-            </div>
-
-            <WorkOrderTicket details={workOrderDetails} />
+function WorkOrderTicket({ details }: { details: WorkOrderDetails }) {
+  return (
+    <div className="ticket-wrapper" style={T.container}>
+      {/* Header */}
+      <div style={{ ...T.center, paddingBottom: 4 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
+          <LogoComponent size={32} />
         </div>
+        <div style={{ fontSize: "12pt", fontWeight: 900 }}>Orden de Trabajo</div>
+        <div style={{ fontWeight: 700, fontSize: "8.5pt", letterSpacing: "1px" }}>PRODUCCIÓN / TALLER</div>
+      </div>
+
+      <Line dashed={false} />
+
+      {/* Meta */}
+      <div style={{ marginBottom: 4 }}>
+        <div style={T.row}><span style={T.bold}>No. Orden:</span><span style={{ ...T.bold, fontFamily: "monospace", fontSize: "10pt" }}>{details.order_id.slice(0, 8).toUpperCase()}</span></div>
+        <div style={T.row}>
+          <span style={T.bold}>Fecha:</span>
+          <span style={T.small}>{new Date(details.order_date).toLocaleString("es-MX", { timeZone: "America/Matamoros", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+        </div>
+        {details.seller_name && <div style={T.row}><span style={T.bold}>Vendedor:</span><span>{details.seller_name}</span></div>}
+      </div>
+
+      {/* Client */}
+      <div style={{ border: "2px solid #000", padding: "4px 6px", marginBottom: 4 }}>
+        <div style={{ ...T.label, ...T.center, marginBottom: 2 }}>Cliente</div>
+        <div style={{ fontSize: "12pt", fontWeight: 900, textAlign: "center" }}>
+          {details.customer_name || "MOSTRADOR"}
+        </div>
+        {details.customer_phone && <div style={{ ...T.small, ...T.center, marginTop: 2 }}>{details.customer_phone}</div>}
+      </div>
+
+      {/* School */}
+      {details.school_name && (
+        <div style={{ border: "1.5px solid #000", padding: "3px 6px", marginBottom: 4 }}>
+          <div style={{ ...T.label, ...T.center, marginBottom: 2 }}>Escuela</div>
+          <div style={{ fontSize: "11pt", fontWeight: 900, textAlign: "center" }}>{details.school_name}</div>
+        </div>
+      )}
+
+      {/* Instructions */}
+      {details.embroidery_notes && (
+        <div style={{ border: "1.5px dashed #000", padding: "4px 6px", marginBottom: 4 }}>
+          <div style={{ ...T.label, marginBottom: 3 }}>Instrucciones / Notas:</div>
+          <div style={{ whiteSpace: "pre-wrap", fontWeight: 700, fontSize: "9pt" }}>{details.embroidery_notes}</div>
+        </div>
+      )}
+
+      <Line />
+
+      {/* Items */}
+      <div style={{ ...T.label, marginBottom: 3 }}>Productos:</div>
+      {details.items.map((item, i) => (
+        <div key={item.item_id} style={{ marginBottom: 5, paddingBottom: 4, borderBottom: i < details.items.length - 1 ? "1px dotted #bbb" : "none" }}>
+          <div style={{ fontWeight: 900, fontSize: "9.5pt" }}>{item.quantity}× {item.product_name}</div>
+          <div style={{ ...T.small, color: "#444", marginTop: 1 }}>Talla: {item.size} &bull; Color: {item.color}</div>
+          <div style={{ ...T.small, fontFamily: "monospace", marginTop: 1 }}>SKU: {item.sku}</div>
+        </div>
+      ))}
+
+      <Line />
+
+      {/* QR */}
+      <div style={{ ...T.center, paddingTop: 4 }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <QRCode value={details.order_id} size={120} style={{ height: "auto", width: 120 }} viewBox="0 0 256 256" />
+        </div>
+        <div style={{ ...T.small, marginTop: 3, fontFamily: "monospace" }}>{details.order_id.slice(0, 8).toUpperCase()}</div>
+      </div>
+    </div>
+  );
+}
+
+export default function WorkOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const [details, setDetails] = useState<WorkOrderDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    params.then(({ id }) =>
+      getWorkOrderDetails(id)
+        .then((d) => { if (d) setDetails(d); else setError(true); })
+        .catch(() => setError(true))
+        .finally(() => setLoading(false))
     );
+  }, [params]);
+
+  useEffect(() => {
+    if (!details) return;
+    const auto = new URLSearchParams(window.location.search).get('autoprint') === 'true';
+    if (auto) {
+      const t = setTimeout(() => window.print(), 1200);
+      return () => clearTimeout(t);
+    }
+  }, [details]);
+
+  if (loading) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Arial, sans-serif" }}>
+      <p style={{ color: "#64748b" }}>Cargando orden de trabajo…</p>
+    </div>
+  );
+
+  if (error || !details) return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+      <p style={{ color: "#dc2626" }}>No se pudo cargar la orden de trabajo</p>
+      <button onClick={() => window.close()} style={{ background: "#64748b", color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", cursor: "pointer" }}>Cerrar ventana</button>
+    </div>
+  );
+
+  return (
+    <div>
+      <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
+
+      <div className="no-print" style={{ textAlign: "center", padding: "16px 0 12px" }}>
+        <button
+          onClick={() => window.print()}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+        >
+          <Printer size={16} />
+          Imprimir Orden de Trabajo
+        </button>
+        <p style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>Se imprimirá automáticamente cuando se abra desde múltiples copias</p>
+      </div>
+
+      <WorkOrderTicket details={details} />
+    </div>
+  );
 }
