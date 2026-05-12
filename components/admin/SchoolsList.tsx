@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { School, createSchool, updateSchool, deleteSchool } from '@/app/admin/schools/actions';
 
 interface SchoolsListProps {
@@ -18,9 +19,8 @@ export function SchoolsList({ initialSchools }: SchoolsListProps) {
     try {
       await createSchool(formData);
       setIsAddingSchool(false);
-      // The page will be revalidated automatically
-    } catch (error) {
-      console.error('Error adding school:', error);
+    } catch {
+      toast.error('Error al agregar la escuela');
     } finally {
       setIsSubmitting(false);
     }
@@ -31,9 +31,8 @@ export function SchoolsList({ initialSchools }: SchoolsListProps) {
     try {
       await updateSchool(id, formData);
       setEditingSchool(null);
-      // The page will be revalidated automatically
-    } catch (error) {
-      console.error('Error updating school:', error);
+    } catch {
+      toast.error('Error al actualizar la escuela');
     } finally {
       setIsSubmitting(false);
     }
@@ -44,8 +43,8 @@ export function SchoolsList({ initialSchools }: SchoolsListProps) {
       try {
         await deleteSchool(id);
         setSchools(schools.filter(school => school.id !== id));
-      } catch (error) {
-        console.error('Error deleting school:', error);
+      } catch {
+        toast.error('Error al eliminar la escuela');
       }
     }
   };

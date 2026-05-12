@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import type { CartItem as CartItemFromPage } from '@/app/admin/pos/page';
 import Image from 'next/image';
 
@@ -58,11 +59,11 @@ export function PosCart({ items, updateQuantity, removeItem, processSale, isProc
     const handleApplyDiscount = () => {
         const finalTotal = parseFloat(finalTotalInput);
         if (isNaN(finalTotal) || finalTotal > subtotal) {
-            alert("El total final no puede ser mayor que el subtotal.");
+            toast.error('El total final no puede ser mayor que el subtotal.');
             return;
         }
         if (!discountReason) {
-            alert("Por favor, seleccione un motivo para el descuento.");
+            toast.error('Por favor, seleccione un motivo para el descuento.');
             return;
         }
         setDiscountModalOpen(false);

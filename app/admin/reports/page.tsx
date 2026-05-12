@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/admin/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReportCharts from './ReportCharts';
 import TopProductsChart from '@/components/admin/TopProductsChart';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
@@ -212,14 +213,18 @@ async function ReportContent({ startDate, endDate }: { startDate: string; endDat
       )}
 
       {/* Client-side charts (area + pie + bar sellers) */}
-      <ReportCharts report={report} />
+      <ErrorBoundary>
+        <ReportCharts report={report} />
+      </ErrorBoundary>
 
       {/* Top products */}
       <Section title="Top 10 Productos" description="Productos más vendidos por unidades en el período">
-        <TopProductsChart
-          products={report.topSellingProducts}
-          totalItemsSold={report.totalItemsSold}
-        />
+        <ErrorBoundary>
+          <TopProductsChart
+            products={report.topSellingProducts}
+            totalItemsSold={report.totalItemsSold}
+          />
+        </ErrorBoundary>
       </Section>
 
       {/* Layaway table */}

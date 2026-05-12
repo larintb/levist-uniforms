@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useTransition, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { 
     createBrandAction, 
     createCollectionAction, 
@@ -35,12 +36,16 @@ export function CatalogManager({ initialBrands, initialCollections, initialCateg
     // --- Manejadores para CREAR ---
     const handleCreateSubmit = (action: (formData: FormData) => Promise<{success: boolean; message?: string}>, formRef: React.RefObject<HTMLFormElement | null>, entityName: string) => (formData: FormData) => {
         startTransition(async () => {
-            const result = await action(formData);
-            if (result.success) {
-                alert(`¡${entityName} creada!`);
-                formRef.current?.reset();
-            } else {
-                alert(`Error: ${result.message}`);
+            try {
+                const result = await action(formData);
+                if (result.success) {
+                    toast.success(`¡${entityName} creada!`);
+                    formRef.current?.reset();
+                } else {
+                    toast.error(result.message || `Error al crear ${entityName.toLowerCase()}`);
+                }
+            } catch {
+                toast.error(`Error al crear ${entityName.toLowerCase()}`);
             }
         });
     };
@@ -50,11 +55,15 @@ export function CatalogManager({ initialBrands, initialCollections, initialCateg
         if (!confirm(`¿Estás seguro de que quieres eliminar esta ${entityName.toLowerCase()}? Esta acción no se puede deshacer.`)) return;
 
         startTransition(async () => {
-            const result = await action(id);
-            if (result.success) {
-                alert(`¡${entityName} eliminada!`);
-            } else {
-                alert(`Error: ${result.message}`);
+            try {
+                const result = await action(id);
+                if (result.success) {
+                    toast.success(`¡${entityName} eliminada!`);
+                } else {
+                    toast.error(result.message || `Error al eliminar ${entityName.toLowerCase()}`);
+                }
+            } catch {
+                toast.error(`Error al eliminar ${entityName.toLowerCase()}`);
             }
         });
     };

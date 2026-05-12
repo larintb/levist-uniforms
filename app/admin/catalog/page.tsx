@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { CatalogManager } from '@/components/admin/CatalogManager';
 import { PageHeader } from '@/components/admin/PageHeader';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default async function CatalogPage() {
     const supabase = await createClient();
@@ -25,11 +26,13 @@ export default async function CatalogPage() {
     return (
         <div className="p-6">
             <PageHeader title="Catálogo" description="Gestiona las marcas, colecciones y categorías de tu tienda." />
-            <CatalogManager
-                initialBrands={brands || []}
-                initialCollections={collections || []}
-                initialCategories={categories || []}
-            />
+            <ErrorBoundary>
+                <CatalogManager
+                    initialBrands={brands || []}
+                    initialCollections={collections || []}
+                    initialCategories={categories || []}
+                />
+            </ErrorBoundary>
         </div>
     );
 }

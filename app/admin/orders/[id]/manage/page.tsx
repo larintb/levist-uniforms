@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import React from 'react';
 import { OrderManagementView } from '@/components/admin/OrderManagementView';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Tipo de datos completo para gestión de orden
 type OrderDetailsForManagement = {
@@ -122,8 +123,8 @@ export default async function OrderManagePage({ params }: PageProps) {
     }
 
     return (
-        <div>
+        <ErrorBoundary>
             <OrderManagementView orderDetails={orderDetails} />
-        </div>
+        </ErrorBoundary>
     );
 }

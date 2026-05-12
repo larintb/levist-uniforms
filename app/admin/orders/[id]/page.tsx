@@ -118,7 +118,7 @@ export default async function OrderReceiptPage({ params }: { params: Promise<{ i
     // Esta página ahora renderiza exclusivamente el componente Receipt.
     // Sirve como una vista limpia y amigable para la impresión de una orden específica.
     return (
-        <div className="bg-gray-100 min-h-screen">
+        <div className="min-h-screen bg-muted/30 pb-10">
             <Receipt details={orderDetails} />
         </div>
     );

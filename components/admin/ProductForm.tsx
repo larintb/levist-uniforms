@@ -1,20 +1,25 @@
-// Pega este código completo en tu archivo ProductForm.tsx
-
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
 import Image from 'next/image';
 import { createProductAction, updateProductAction } from '@/app/admin/products/actions';
 import { useRouter } from 'next/navigation';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import { Plus, Trash2, ImageOff, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
-// --- Tipos ---
-type Brand = { id: string; name: string; };
-type Collection = { id: string; name: string; brand_id: string; };
-type Category = { id: string; name: string; };
+// --- Types ---
+type Brand = { id: string; name: string };
+type Collection = { id: string; name: string; brand_id: string };
+type Category = { id: string; name: string };
 
 type InventoryRow = {
-  id: string; 
+  id: string;
   size: string;
   stock: number;
   price: number;
@@ -22,7 +27,7 @@ type InventoryRow = {
 };
 
 type Variant = {
-  id: string; 
+  id: string;
   color: string;
   image_url: string | null;
   inventory: InventoryRow[];
@@ -39,11 +44,11 @@ type InitialProductData = {
     color: string;
     image_url: string | null;
     inventory: {
-        id: string;
-        size: string;
-        stock: number;
-        price: number;
-        barcode: string | null;
+      id: string;
+      size: string;
+      stock: number;
+      price: number;
+      barcode: string | null;
     }[];
   }[];
 };
@@ -55,224 +60,110 @@ export interface ProductFormProps {
   initialData?: InitialProductData;
 }
 
-// Este arreglo contiene todas las tallas únicas, estandarizadas y ordenadas lógicamente.
-// Este arreglo contiene todas las tallas únicas, estandarizadas y ordenadas lógicamente.
 const SIZES = [
-  "XXS",
-  "XXS PET",
-  "XXS TAL",
-  "XXS SHR",
-  "2XS PET",
-  "2XS SHR",
-  "2XS TAL",
-  "2XS",
-  "XS PET",
-  "XS SHR",
-  "XS TAL",
-  "XS",
-  "S PET",
-  "S SHR",
-  "S TAL",
-  "S",
-  "S/M",
-  "M PET",
-  "M SHR",
-  "M TAL",
-  "M",
-  "L PET",
-  "L SHR",
-  "L TAL",
-  "L",
-  "L/XL",
-  "XL PET",
-  "XL SHR",
-  "XL TAL",
-  "XL",
-  "XXL",
-  "XXL PET",
-  "XXL SHR",
-  "XXL TAL",
-  "1X PET",
-  "1X TAL",
-  "1X",
-  "2X PET",
-  "2X SHR",
-  "2X TAL",
-  "2X",
-  "2XL PET",
-  "2XL SHR",
-  "2XL TAL",
-  "2XL",
-  "3X PET",
-  "3X SHR",
-  "3X TAL",
-  "3X",
-  "3XL PET",
-  "3XL SHR",
-  "3XL TAL",
-  "3XL",
-  "4X",
-  "4XL SHR",
-  "4XL TAL",
-  "4XL",
-  "5X",
-  "5XL SHR",
-  "5XL TAL",
-  "5XL",
-  "OSFA",
-  "4",
-  "6",
-  "8",
-  "10",
-  "12",
-  "14",
-  "16",
-  "18",
-  "20",
-  "22",
-  "23",
-  "23.5",
-  "24",
-  "24.5",
-  "25",
-  "25.5",
-  "26",
-  "26.5",
-  "27",
-  "27.5",
-  "28",
-  "28.5",
-  "29",
-  "29.5",
-  "30",
-  "32",
-  "34",
-  "36",
-  "38",
-  "40",
-  "42",
-  "44",
-  "46",
-  "48",
-  "50",
-  "52",
-  "54",
-  "56",
-  "28 LG",
-  "30 LG",
-  "32 LG",
-  "34 LG",
-  "36 LG",
-  "38 LG",
-  "40 LG",
-  "42 LG",
-  "44 LG",
-  "46 LG",
-  "48 LG",
-  "50 LG",
-  "52 LG",
-  "54 LG",
-  "56 LG",
-  "R",
-  "X"
+  "XXS","XXS PET","XXS TAL","XXS SHR","2XS PET","2XS SHR","2XS TAL","2XS",
+  "XS PET","XS SHR","XS TAL","XS","S PET","S SHR","S TAL","S","S/M",
+  "M PET","M SHR","M TAL","M","L PET","L SHR","L TAL","L","L/XL",
+  "XL PET","XL SHR","XL TAL","XL","XXL","XXL PET","XXL SHR","XXL TAL",
+  "1X PET","1X TAL","1X","2X PET","2X SHR","2X TAL","2X",
+  "2XL PET","2XL SHR","2XL TAL","2XL","3X PET","3X SHR","3X TAL","3X",
+  "3XL PET","3XL SHR","3XL TAL","3XL","4X","4XL SHR","4XL TAL","4XL",
+  "5X","5XL SHR","5XL TAL","5XL","OSFA",
+  "4","6","8","10","12","14","16","18","20","22","23","23.5","24","24.5",
+  "25","25.5","26","26.5","27","27.5","28","28.5","29","29.5","30",
+  "32","34","36","38","40","42","44","46","48","50","52","54","56",
+  "28 LG","30 LG","32 LG","34 LG","36 LG","38 LG","40 LG","42 LG",
+  "44 LG","46 LG","48 LG","50 LG","52 LG","54 LG","56 LG","R","X",
 ];
 
-// --- Iconos ---
-const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>;
-const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" /></svg>;
-const ImageIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>;
-const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>;
-
+// Shared select className (native <select> stays native for large lists)
+const selectCls = cn(
+  "flex h-8 w-full rounded-md border border-input bg-background px-3 py-0 text-sm",
+  "text-foreground ring-offset-background placeholder:text-muted-foreground",
+  "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "disabled:cursor-not-allowed disabled:opacity-50"
+);
 
 export function ProductForm({ brands, collections, categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [selectedBrand, setSelectedBrand] = useState<string>(initialData?.collection_id ? collections.find(c => c.id === initialData.collection_id)?.brand_id || '' : '');
-  const [variants, setVariants] = useState<Variant[]>(initialData?.product_variants || []);
+  const [selectedBrand, setSelectedBrand] = useState<string>(
+    initialData?.collection_id
+      ? (collections.find(c => c.id === initialData.collection_id)?.brand_id ?? '')
+      : ''
+  );
+  const [variants, setVariants] = useState<Variant[]>(initialData?.product_variants ?? []);
   const [openVariantId, setOpenVariantId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!initialData && variants.length === 0) {
-      const newVariantId = `temp-${crypto.randomUUID()}`;
-      setVariants([{ id: newVariantId, color: '', image_url: '', inventory: [] }]);
-      setOpenVariantId(newVariantId);
+      const id = `temp-${crypto.randomUUID()}`;
+      setVariants([{ id, color: '', image_url: '', inventory: [] }]);
+      setOpenVariantId(id);
     }
   }, [initialData, variants.length]);
 
   const availableCollections = collections.filter(c => c.brand_id === selectedBrand);
 
-  const handleVariantFieldChange = (variantId: string, field: 'color' | 'image_url', value: string) => {
+  const handleVariantField = (variantId: string, field: 'color' | 'image_url', value: string) =>
     setVariants(prev => prev.map(v => v.id === variantId ? { ...v, [field]: value } : v));
-  };
 
   const handleAddVariant = () => {
-    const newVariantId = `temp-${crypto.randomUUID()}`;
-    setVariants([...variants, { id: newVariantId, color: '', image_url: null, inventory: [] }]);
-    setOpenVariantId(newVariantId);
+    const id = `temp-${crypto.randomUUID()}`;
+    setVariants(prev => [...prev, { id, color: '', image_url: null, inventory: [] }]);
+    setOpenVariantId(id);
   };
-  
-  const handleRemoveVariant = (id: string) => setVariants(variants.filter(v => v.id !== id));
-  
-  const handleAddInventoryRow = (vId: string) => {
-    setVariants(variants.map(v =>
+
+  const handleRemoveVariant = (id: string) =>
+    setVariants(prev => prev.filter(v => v.id !== id));
+
+  const handleAddInventoryRow = (vId: string) =>
+    setVariants(prev => prev.map(v =>
       v.id === vId
         ? { ...v, inventory: [...v.inventory, { id: `temp-${crypto.randomUUID()}`, size: '', stock: 0, price: 0, barcode: null }] }
         : v
     ));
-  };
 
-  const handleInventoryChange = (variantId: string, inventoryId: string, field: keyof InventoryRow, value: string | number) => {
-    setVariants(prev => prev.map(v => 
-      v.id === variantId 
-        ? { 
-            ...v, 
-            inventory: v.inventory.map(i => 
-              i.id === inventoryId 
-                ? { ...i, [field]: value } 
-                : i
-            ) 
-          }
+  const handleInventoryChange = (variantId: string, invId: string, field: keyof InventoryRow, value: string | number) =>
+    setVariants(prev => prev.map(v =>
+      v.id === variantId
+        ? { ...v, inventory: v.inventory.map(i => i.id === invId ? { ...i, [field]: value } : i) }
         : v
     ));
-  };
 
-  const handleRemoveInventoryRow = (vId: string, iId: string) => {
-    setVariants(variants.map(v =>
-      v.id === vId
-        ? { ...v, inventory: v.inventory.filter(i => i.id !== iId) }
-        : v
+  const handleRemoveInventoryRow = (vId: string, iId: string) =>
+    setVariants(prev => prev.map(v =>
+      v.id === vId ? { ...v, inventory: v.inventory.filter(i => i.id !== iId) } : v
     ));
-  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    const variantsData = variants.map(variant => ({
-        id: variant.id.startsWith('temp-') ? undefined : variant.id,
-        color: variant.color,
-        image_url: variant.image_url,
-        inventory: variant.inventory.map(inv => ({
-            id: inv.id.startsWith('temp-') ? undefined : inv.id,
-            size: inv.size,
-            stock: Number(inv.stock),
-            price: Number(inv.price),
-            barcode: inv.barcode,
-        }))
+    const variantsData = variants.map(v => ({
+      id: v.id.startsWith('temp-') ? undefined : v.id,
+      color: v.color,
+      image_url: v.image_url,
+      inventory: v.inventory.map(i => ({
+        id: i.id.startsWith('temp-') ? undefined : i.id,
+        size: i.size,
+        stock: Number(i.stock),
+        price: Number(i.price),
+        barcode: i.barcode,
+      })),
     }));
 
-    const finalFormData = new FormData();
-    finalFormData.append('name', formData.get('name') as string);
-    finalFormData.append('sku_base', formData.get('sku_base') as string);
-    finalFormData.append('collection_id', formData.get('collection_id') as string);
-    finalFormData.append('category_id', formData.get('category_id') as string);
-    finalFormData.append('variants_json', JSON.stringify(variantsData));
-    finalFormData.append('brand_id', selectedBrand);
+    const payload = new FormData();
+    payload.append('name', formData.get('name') as string);
+    payload.append('sku_base', formData.get('sku_base') as string);
+    payload.append('collection_id', formData.get('collection_id') as string);
+    payload.append('category_id', formData.get('category_id') as string);
+    payload.append('variants_json', JSON.stringify(variantsData));
+    payload.append('brand_id', selectedBrand);
 
     startTransition(async () => {
       const action = initialData ? updateProductAction.bind(null, initialData.id) : createProductAction;
-      const result = await action(finalFormData);
-
+      const result = await action(payload);
       if (result.success) {
         toast.success(result.message);
         setTimeout(() => router.push('/admin/products'), 1500);
@@ -282,191 +173,298 @@ export function ProductForm({ brands, collections, categories, initialData }: Pr
     });
   };
 
-  const formInputStyle = "block w-full rounded-lg border-0 py-1.5 px-3 text-gray-900 bg-white ring-1 ring-inset ring-gray-300 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6";
-  const formLabelStyle = "block text-sm font-medium leading-6 text-gray-900";
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-12">
-      <Toaster />
-      <div className="bg-white p-8 rounded-2xl shadow-lg ring-1 ring-gray-900/5">
-        <h2 className="text-base font-semibold leading-7 text-gray-900">Información del Producto</h2>
-        <p className="mt-1 text-sm leading-6 text-gray-600">Datos generales que definen el producto base.</p>
-        <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-          <div className="sm:col-span-3">
-            <label htmlFor="name" className={formLabelStyle}>Nombre del Producto</label>
-            <div className="mt-2"><input type="text" name="name" id="name" required defaultValue={initialData?.name} className={formInputStyle}/></div>
-          </div>
-          <div className="sm:col-span-3">
-            <label htmlFor="sku_base" className={formLabelStyle}>SKU Base</label>
-            <div className="mt-2"><input type="text" name="sku_base" id="sku_base" required defaultValue={initialData?.sku_base} className={formInputStyle}/></div>
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="brand_id" className={formLabelStyle}>Marca</label>
-            <div className="mt-2"><select name="brand_id" id="brand_id" required value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)} className={formInputStyle}><option value="">Selecciona</option>{brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="collection_id" className={formLabelStyle}>Colección</label>
-            <div className="mt-2"><select name="collection_id" id="collection_id" required defaultValue={initialData?.collection_id} disabled={!selectedBrand} className={`${formInputStyle} disabled:bg-gray-100 disabled:cursor-not-allowed`}><option value="">Selecciona</option>{availableCollections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="category_id" className={formLabelStyle}>Categoría</label>
-            <div className="mt-2"><select name="category_id" id="category_id" required defaultValue={initialData?.category_id} className={formInputStyle}><option value="">Selecciona</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          </div>
-        </div>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
 
-      <div className="bg-white p-8 rounded-2xl shadow-lg ring-1 ring-gray-900/5">
-        <h2 className="text-base font-semibold leading-7 text-gray-900">Variantes e Inventario</h2>
-        <div className="space-y-4 mt-10">
-          {variants.map((variant, vIndex) => (
-            <div key={variant.id} className="bg-white rounded-xl border border-gray-200/80 overflow-hidden">
-              <div 
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
-                onClick={() => setOpenVariantId(openVariantId === variant.id ? null : variant.id)}
-              >
-                <div className="flex items-center gap-3">
-                  {variant.image_url ? (
-                    <Image src={variant.image_url} alt={variant.color} width={40} height={40} className="h-10 w-10 rounded-md object-cover bg-gray-100" onError={(e) => { const target = e.currentTarget as HTMLImageElement; target.src = 'https://placehold.co/40x40/f8f9fa/e9ecef?text=?'; }}/>
-                  ) : (
-                    <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center">
-                      <ImageIcon className="h-6 w-6 text-gray-300" />
-                    </div>
-                  )}
-                  <h3 className="font-semibold text-gray-800">
-                    {variant.color || `Variante de Color #${vIndex + 1}`}
-                  </h3>
-                </div>
-                <div className="flex items-center gap-4">
-                  {variants.length > 1 && 
-                    <button 
-                      type="button" 
-                      onClick={(e) => { e.stopPropagation(); handleRemoveVariant(variant.id); }} 
-                      className="text-red-600 hover:text-red-800 text-sm font-medium inline-flex items-center gap-1 z-10"
-                    > 
-                      <TrashIcon className="h-4 w-4"/> 
-                      <span className="hidden sm:inline">Eliminar</span>
-                    </button>
-                  }
-                  <ChevronDownIcon className={`h-6 w-6 text-gray-500 transition-transform ${openVariantId === variant.id ? 'rotate-180' : ''}`} />
-                </div>
-              </div>
-
-              {openVariantId === variant.id && (
-                <div className="p-6 pt-2">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-6">
-                    <div className="lg:col-span-1">
-                        <label className={`${formLabelStyle} mb-2`}>Vista Previa</label>
-                        <div className="mt-2 flex justify-center items-center h-40 w-full rounded-lg border border-dashed border-gray-900/25 bg-gray-50 p-2">
-                            {variant.image_url ? ( 
-                              <Image 
-                              src={variant.image_url} 
-                              alt={`Vista previa de ${variant.color}`} 
-                              width={150} 
-                              height={150} 
-                              className="h-full w-full object-contain rounded-md" 
-                              onError={(e) => { const target = e.currentTarget as HTMLImageElement; target.src = 'https://placehold.co/150x150/f8f9fa/e9ecef?text=Error'; }} /> ) : ( <div className="text-center"> <ImageIcon className="mx-auto h-12 w-12 text-gray-300" /> <p className="mt-2 text-xs leading-5 text-gray-600">Sin imagen</p> </div> )}
-                        </div>
-                    </div>
-                    <div className="lg:col-span-2 space-y-6">
-                        <div>
-                            <label htmlFor={`color-${variant.id}`} className={formLabelStyle}>Color</label>
-                            <div className="mt-2"><input type="text" id={`color-${variant.id}`} value={variant.color} onChange={(e) => handleVariantFieldChange(variant.id, 'color', e.target.value)} required placeholder="Ej: Royal Blue" className={formInputStyle}/></div>
-                        </div>
-                        <div>
-                            <label htmlFor={`image_url-${variant.id}`} className={formLabelStyle}>URL de la Imagen</label>
-                            <div className="mt-2"><input type="url" id={`image_url-${variant.id}`} value={variant.image_url ?? ''} onChange={(e) => handleVariantFieldChange(variant.id, 'image_url', e.target.value)} placeholder="https://..." className={formInputStyle}/></div>
-                        </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-8">
-                    <h4 className="text-sm font-medium text-gray-800 mb-4">Inventario de esta Variante</h4>
-                    <div className="grid grid-cols-12 gap-x-4 mb-2 px-2 text-xs font-medium text-gray-500 max-sm:hidden">
-                      <div className="col-span-3">Talla</div>
-                      <div className="col-span-4">Código de Barras</div>
-                      <div className="col-span-2">Stock</div>
-                      <div className="col-span-2">Precio ($)</div>
-                      <div className="col-span-1"></div>
-                    </div>
-                    <div className="space-y-4">
-                      {[...variant.inventory].sort((a, b) => {
-                        const ai = SIZES.indexOf(a.size);
-                        const bi = SIZES.indexOf(b.size);
-                        if (ai === -1 && bi === -1) return 0;
-                        if (ai === -1) return 1;
-                        if (bi === -1) return -1;
-                        return ai - bi;
-                      }).map(inv => (
-                        <div key={inv.id} className="grid grid-cols-12 gap-x-4 gap-y-2 items-center">
-                          <div className="col-span-12 sm:col-span-3">
-                            <label className="sm:hidden text-xs font-medium text-gray-500">Talla</label>
-                            <select 
-                                value={inv.size} 
-                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'size', e.target.value)}
-                                className={formInputStyle}
-                            >
-                                <option value="">Talla</option>{SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                          <div className="col-span-12 sm:col-span-4">
-                                <label className="sm:hidden text-xs font-medium text-gray-500">Código de Barras</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Escanear o escribir código" 
-                                    value={inv.barcode ?? ''} 
-                                    onChange={(e) => handleInventoryChange(variant.id, inv.id, 'barcode', e.target.value)}
-                                    className={formInputStyle} 
-                                    onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} 
-                                />
-                          </div>
-                          <div className="col-span-6 sm:col-span-2">
-                            <label className="sm:hidden text-xs font-medium text-gray-500">Stock</label>
-                            <input 
-                                type="number" 
-                                placeholder="0" 
-                                value={inv.stock} 
-                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'stock', Number(e.target.value))}
-                                className={formInputStyle} 
-                            />
-                          </div>
-                          <div className="col-span-6 sm:col-span-2">
-                            <label className="sm:hidden text-xs font-medium text-gray-500">Precio</label>
-                            <input 
-                                type="number" 
-                                step="1"
-                                placeholder="0.00" 
-                                value={inv.price} 
-                                onChange={(e) => handleInventoryChange(variant.id, inv.id, 'price', Number(e.target.value))}
-                                className={formInputStyle} 
-                            />
-                          </div>
-                          <div className="col-span-12 sm:col-span-1 flex justify-end">
-                            <button type="button" onClick={() => handleRemoveInventoryRow(variant.id, inv.id)} className="text-gray-500 p-2 rounded-full hover:bg-gray-100 hover:text-red-600">
-                              <TrashIcon className="h-5 w-5"/>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <button type="button" onClick={() => handleAddInventoryRow(variant.id)} className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                      <PlusIcon className="h-5 w-5"/>Añadir Talla
-                    </button>
-                  </div>
-                </div>
-              )}
+      {/* Section 1: Base info */}
+      <Card>
+        <CardHeader className="px-6 pt-5 pb-0">
+          <CardTitle className="text-sm font-semibold">Información del Producto</CardTitle>
+          <CardDescription className="text-xs">Datos generales que definen el producto base.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 py-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <div className="sm:col-span-3 space-y-1.5">
+              <Label htmlFor="name" className="text-xs font-medium">Nombre del Producto <span className="text-destructive">*</span></Label>
+              <Input id="name" name="name" required defaultValue={initialData?.name} className="h-8 text-sm" />
             </div>
-          ))}
-        </div>
-        <button type="button" onClick={handleAddVariant} className="mt-8 inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-600 shadow-sm hover:bg-indigo-100">
-          <PlusIcon className="h-5 w-5"/>Añadir Variante
-        </button>
-      </div>
+            <div className="sm:col-span-3 space-y-1.5">
+              <Label htmlFor="sku_base" className="text-xs font-medium">SKU Base <span className="text-destructive">*</span></Label>
+              <Input id="sku_base" name="sku_base" required defaultValue={initialData?.sku_base} className="h-8 text-sm font-mono" />
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="brand_id" className="text-xs font-medium">Marca <span className="text-destructive">*</span></Label>
+              <select
+                name="brand_id"
+                id="brand_id"
+                required
+                value={selectedBrand}
+                onChange={e => setSelectedBrand(e.target.value)}
+                className={selectCls}
+              >
+                <option value="">Selecciona marca</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="collection_id" className="text-xs font-medium">Colección <span className="text-destructive">*</span></Label>
+              <select
+                name="collection_id"
+                id="collection_id"
+                required
+                defaultValue={initialData?.collection_id}
+                disabled={!selectedBrand}
+                className={cn(selectCls, "disabled:opacity-50 disabled:cursor-not-allowed")}
+              >
+                <option value="">Selecciona colección</option>
+                {availableCollections.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="category_id" className="text-xs font-medium">Categoría <span className="text-destructive">*</span></Label>
+              <select
+                name="category_id"
+                id="category_id"
+                required
+                defaultValue={initialData?.category_id}
+                className={selectCls}
+              >
+                <option value="">Selecciona categoría</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="mt-6 flex items-center justify-end gap-x-6">
-        <button type="button" onClick={() => router.back()} disabled={isPending} className="text-sm font-semibold leading-6 text-gray-900">Cancelar</button>
-        <button type="submit" disabled={isPending} className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-400">
-          {isPending ? "Guardando..." : (initialData ? "Actualizar Producto" : "Crear Producto")}
-        </button>
+      {/* Section 2: Variants */}
+      <Card>
+        <CardHeader className="px-6 pt-5 pb-0">
+          <CardTitle className="text-sm font-semibold">Variantes e Inventario</CardTitle>
+          <CardDescription className="text-xs">Cada variante representa un color con sus tallas y existencias.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 py-5 space-y-3">
+          {variants.map((variant, vIndex) => {
+            const isOpen = openVariantId === variant.id;
+            return (
+              <div key={variant.id} className="border border-border rounded-lg overflow-hidden">
+                {/* Variant header */}
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors text-left"
+                  onClick={() => setOpenVariantId(isOpen ? null : variant.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    {variant.image_url ? (
+                      <Image
+                        src={variant.image_url}
+                        alt={variant.color}
+                        width={32}
+                        height={32}
+                        className="size-8 rounded-md object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = ''; }}
+                      />
+                    ) : (
+                      <div className="size-8 rounded-md bg-muted flex items-center justify-center">
+                        <ImageOff size={14} className="text-muted-foreground" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {variant.color || `Variante #${vIndex + 1}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {variant.inventory.length} talla{variant.inventory.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {variants.length > 1 && (
+                      <span
+                        role="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveVariant(variant.id); }}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded hover:bg-destructive/10"
+                      >
+                        <Trash2 size={12} /> Eliminar
+                      </span>
+                    )}
+                    <ChevronDown
+                      size={16}
+                      className={cn("text-muted-foreground transition-transform shrink-0", isOpen && "rotate-180")}
+                    />
+                  </div>
+                </button>
+
+                {/* Variant body */}
+                {isOpen && (
+                  <div className="px-4 pb-5 pt-1 border-t border-border bg-muted/20">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+                      {/* Image preview */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Vista previa</Label>
+                        <div className="flex items-center justify-center h-36 rounded-lg border border-dashed border-border bg-background">
+                          {variant.image_url ? (
+                            <Image
+                              src={variant.image_url}
+                              alt={`Vista previa ${variant.color}`}
+                              width={120}
+                              height={120}
+                              className="h-full w-full object-contain rounded-lg p-1"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).src = ''; }}
+                            />
+                          ) : (
+                            <div className="text-center text-muted-foreground">
+                              <ImageOff size={28} className="mx-auto mb-1.5" />
+                              <p className="text-xs">Sin imagen</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Color + URL */}
+                      <div className="lg:col-span-2 space-y-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`color-${variant.id}`} className="text-xs font-medium">Color <span className="text-destructive">*</span></Label>
+                          <Input
+                            id={`color-${variant.id}`}
+                            value={variant.color}
+                            onChange={e => handleVariantField(variant.id, 'color', e.target.value)}
+                            required
+                            placeholder="Ej: Royal Blue"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`image_url-${variant.id}`} className="text-xs font-medium">URL de Imagen</Label>
+                          <Input
+                            id={`image_url-${variant.id}`}
+                            type="url"
+                            value={variant.image_url ?? ''}
+                            onChange={e => handleVariantField(variant.id, 'image_url', e.target.value)}
+                            placeholder="https://…"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Inventory table */}
+                    <Separator className="my-4" />
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inventario</p>
+
+                      {/* Header row */}
+                      {variant.inventory.length > 0 && (
+                        <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                          <div className="col-span-3">Talla</div>
+                          <div className="col-span-4">Código de barras</div>
+                          <div className="col-span-2">Stock</div>
+                          <div className="col-span-2">Precio ($)</div>
+                          <div className="col-span-1" />
+                        </div>
+                      )}
+
+                      {[...variant.inventory]
+                        .sort((a, b) => {
+                          const ai = SIZES.indexOf(a.size), bi = SIZES.indexOf(b.size);
+                          if (ai === -1 && bi === -1) return 0;
+                          if (ai === -1) return 1;
+                          if (bi === -1) return -1;
+                          return ai - bi;
+                        })
+                        .map(inv => (
+                          <div key={inv.id} className="grid grid-cols-12 gap-2 items-center">
+                            <div className="col-span-12 sm:col-span-3">
+                              <label className="sm:hidden text-[10px] text-muted-foreground mb-0.5 block">Talla</label>
+                              <select
+                                value={inv.size}
+                                onChange={e => handleInventoryChange(variant.id, inv.id, 'size', e.target.value)}
+                                className={selectCls}
+                              >
+                                <option value="">Talla</option>
+                                {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div className="col-span-12 sm:col-span-4">
+                              <label className="sm:hidden text-[10px] text-muted-foreground mb-0.5 block">Código de barras</label>
+                              <Input
+                                type="text"
+                                placeholder="Escanear o escribir"
+                                value={inv.barcode ?? ''}
+                                onChange={e => handleInventoryChange(variant.id, inv.id, 'barcode', e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
+                                className="h-8 text-sm font-mono"
+                              />
+                            </div>
+                            <div className="col-span-6 sm:col-span-2">
+                              <label className="sm:hidden text-[10px] text-muted-foreground mb-0.5 block">Stock</label>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={inv.stock}
+                                onChange={e => handleInventoryChange(variant.id, inv.id, 'stock', Number(e.target.value))}
+                                className="h-8 text-sm font-mono tabular-nums"
+                              />
+                            </div>
+                            <div className="col-span-6 sm:col-span-2">
+                              <label className="sm:hidden text-[10px] text-muted-foreground mb-0.5 block">Precio</label>
+                              <Input
+                                type="number"
+                                step="1"
+                                placeholder="0"
+                                value={inv.price}
+                                onChange={e => handleInventoryChange(variant.id, inv.id, 'price', Number(e.target.value))}
+                                className="h-8 text-sm font-mono tabular-nums"
+                              />
+                            </div>
+                            <div className="col-span-12 sm:col-span-1 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveInventoryRow(variant.id, inv.id)}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddInventoryRow(variant.id)}
+                        className="mt-1"
+                      >
+                        <Plus size={14} /> Añadir Talla
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddVariant}
+            className="w-full border-dashed"
+          >
+            <Plus size={14} /> Añadir Variante de Color
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3 pb-2">
+        <Button type="button" variant="ghost" size="sm" onClick={() => router.back()} disabled={isPending}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending} size="sm">
+          {isPending ? "Guardando…" : initialData ? "Actualizar Producto" : "Crear Producto"}
+        </Button>
       </div>
     </form>
   );
